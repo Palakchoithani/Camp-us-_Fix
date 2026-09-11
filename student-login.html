@@ -96,7 +96,7 @@
         <label class="block text-xs font-mono text-white/70">
           Email ID
         </label>
-        <input id="auth-input-email" type="email" required placeholder="name@campus.edu"
+        <input id="auth-input-email" type="email" placeholder="name@campus.edu"
           class="w-full px-3 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition" />
       </div>
 
@@ -304,7 +304,12 @@
           const inputPass = document.getElementById('auth-input-password');
           const deptContainer = document.getElementById('auth-deptname-container');
 
-          if (inputEmail) inputEmail.value = '';
+          if (inputEmail) {
+            inputEmail.value = '';
+            // For student/admin: email is optional (ID is primary), for any role keep as text to avoid browser type=email blocking
+            inputEmail.type = 'text';
+            inputEmail.removeAttribute('required');
+          }
 
           if (labelId) labelId.textContent = cfg.idLabel;
           if (inputId) {
@@ -341,7 +346,7 @@
           if (inputEmail) inputEmail.value = cfg.demoEmail;
           if (inputId) inputId.value = cfg.demoId;
           if (inputPass) inputPass.value = cfg.demoPass;
-          if (selectDept && (!selectDept.value || currentActiveRole !== 'department') && cfg.demoDeptName) {
+          if (selectDept && currentActiveRole === 'department' && cfg.demoDeptName) {
             selectDept.value = cfg.demoDeptName;
           }
         };

@@ -600,11 +600,17 @@
 
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      let expectedRole = null;
+      if (typeof window !== 'undefined') {
+        if (window.location.pathname.includes('admin')) expectedRole = 'admin';
+        else if (window.location.pathname.includes('department')) expectedRole = 'department';
+        else if (window.location.pathname.includes('student')) expectedRole = 'student';
+      }
+      const session = window.getCurrentSession ? window.getCurrentSession(expectedRole) : null;
       const user = session && session.user ? session.user : {};
 
       const params = new URLSearchParams({
-        role: user.role || 'student',
+        role: user.role || expectedRole || 'student',
         userId: user.id || 'anon',
         deptName: user.deptName || '',
         token: session && session.token ? session.token : ''
@@ -665,9 +671,9 @@
     updateLiveIndicator(isLive) {
       document.querySelectorAll('.campus-realtime-indicator').forEach(el => {
         if (isLive) {
-          el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-mono font-bold shadow-xs"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Live Realtime Active</span>`;
+          el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/25 text-[11px] font-mono font-bold shadow-xs" title="Live Real-time Sync Active"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Live</span>`;
         } else {
-          el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[11px] font-mono font-bold"><span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>Connecting...</span>`;
+          el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/25 text-[11px] font-mono font-semibold" title="Connecting to server"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>Connecting</span>`;
         }
       });
     }
@@ -690,9 +696,18 @@
         }
       }
 
-      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      let currentRole = 'student';
+      if (typeof window !== 'undefined') {
+        if (document.body && document.body.dataset && document.body.dataset.role) {
+          currentRole = document.body.dataset.role;
+        } else if (window.location.pathname.includes('admin')) {
+          currentRole = 'admin';
+        } else if (window.location.pathname.includes('department')) {
+          currentRole = 'department';
+        }
+      }
+      const session = window.getCurrentSession ? window.getCurrentSession(currentRole) : null;
       const currentUser = session ? session.user : null;
-      const currentRole = currentUser ? currentUser.role : 'student';
 
       const idx = ticketsCache.findIndex(t => t.id === data.id);
       if (idx !== -1) {
@@ -735,12 +750,66 @@
 
   window.CampusRealtime = new CampusRealtimeManager();
 
+  function getActiveRole() {
+    if (typeof window !== 'undefined') {
+      if (document.body && document.body.dataset && document.body.dataset.role) {
+        return document.body.dataset.role;
+      } else if (window.location.pathname.includes('admin')) {
+        return 'admin';
+      } else if (window.location.pathname.includes('department')) {
+        return 'department';
+      } else if (window.location.pathname.includes('student')) {
+        return 'student';
+      }
+    }
+    return null;
+  }
+
+  function getActiveAuthToken() {
+    const role = getActiveRole();
+    const session = window.getCurrentSession ? window.getCurrentSession(role) : null;
+    return session && session.token ? session.token : '';
+  }
+
+  function apiFetch(url, options = {}) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (!options.headers['Content-Type'] && !(options.body instanceof FormData)) {
+      options.headers['Content-Type'] = 'application/json';
+    }
+    const role = getActiveRole();
+    if (role && !options.headers['X-Campus-Role']) {
+      options.headers['X-Campus-Role'] = role;
+    }
+    const token = getActiveAuthToken();
+    if (token && !options.headers['Authorization']) {
+      options.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, options).then(async res => {
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        data = { status: res.status, statusText: res.statusText };
+      }
+      if (!res.ok) {
+        const errMsg = data.error || data.message || `Request failed with status ${res.status}`;
+        const err = new Error(errMsg);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    });
+  }
+
   window.fetchTicketsFromBackend = function () {
     return fetch('/api/tickets')
       .then(res => res.json())
       .then(dbTickets => {
         if (Array.isArray(dbTickets)) {
           ticketsCache = dbTickets;
+          ticketsCacheLoaded = true;
           window.dispatchEvent(new CustomEvent('campus:tickets-updated', { detail: ticketsCache }));
           return dbTickets;
         }
@@ -769,53 +838,47 @@
     // Only send bulk array to backend if explicitly requested (e.g. legacy fallback),
     // avoiding duplicate requests when individual REST endpoints are used.
     if (syncWithBackend) {
-      fetch('/api/tickets', {
+      apiFetch('/api/tickets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tickets)
       }).catch(e => console.warn('Backend ticket sync notice:', e));
     }
   };
 
-  // Direct backend mutation helpers
+  // Direct backend mutation helpers (returns Promise rejecting on HTTP error)
   window.apiCreateTicket = function (ticketData) {
-    return fetch('/api/tickets', {
+    return apiFetch('/api/tickets', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ticketData)
-    }).then(res => res.json());
+    });
   };
 
   window.apiUpdateStatus = function (ticketId, status, notes = '') {
-    return fetch(`/api/tickets/${encodeURIComponent(ticketId)}/status`, {
+    return apiFetch(`/api/tickets/${encodeURIComponent(ticketId)}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, notes })
-    }).then(res => res.json());
+    });
   };
 
   window.apiAssignDept = function (ticketId, department, reason = '') {
-    return fetch(`/api/tickets/${encodeURIComponent(ticketId)}/assign`, {
+    return apiFetch(`/api/tickets/${encodeURIComponent(ticketId)}/assign`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ department, reason })
-    }).then(res => res.json());
+    });
   };
 
   window.apiVerifyTicket = function (ticketId, decision, rating = 5, notes = '') {
-    return fetch(`/api/tickets/${encodeURIComponent(ticketId)}/verify`, {
+    return apiFetch(`/api/tickets/${encodeURIComponent(ticketId)}/verify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision, rating, notes })
-    }).then(res => res.json());
+    });
   };
 
   window.apiUpvoteTicket = function (ticketId) {
-    return fetch(`/api/tickets/${encodeURIComponent(ticketId)}/upvote`, {
+    return apiFetch(`/api/tickets/${encodeURIComponent(ticketId)}/upvote`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
-    }).then(res => res.json());
+    });
   };
 
   window.getStudentTickets = function (studentId) {
@@ -867,7 +930,14 @@
       category: orderData.severity === 'critical' ? 'critical' : 'field',
       slaRemaining: orderData.slaRemaining || (orderData.severity === 'critical' ? '30m Remaining' : '6h Remaining'),
       assignedCrew: orderData.assignedCrew || "Crew #01 (Lead)",
-      crewInitials: (orderData.assignedCrew ? orderData.assignedCrew.slice(0, 2).toUpperCase() : "CR"),
+      crewInitials: (function () {
+        if (!orderData.assignedCrew) return "CR";
+        const clean = orderData.assignedCrew.replace(/\(.*?\)/g, '').replace(/[^a-zA-Z\s]/g, '').trim();
+        const parts = clean.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        if (parts.length === 1 && parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
+        return "CR";
+      })(),
       currentStep: "Dispatched to Site",
       progress: 25,
       studentName: orderData.studentName || "Campus Dispatch Ops",
@@ -902,13 +972,20 @@
     const t = ticketDept.toLowerCase().trim();
     const u = userDept.toLowerCase().trim();
     if (t === u) return true;
-    if ((u.includes('plumb') || u.includes('facility')) && (t.includes('plumb') || t.includes('facility') || t.includes('sanitation'))) return true;
-    if ((u.includes('elect') || u.includes('power')) && (t.includes('elect') || t.includes('power'))) return true;
-    if ((u.includes('it') || u.includes('network') || u.includes('wi-fi')) && (t.includes('it') || t.includes('network') || t.includes('wi-fi') || t.includes('wifi'))) return true;
-    if ((u.includes('hostel') || u.includes('food') || u.includes('mess')) && (t.includes('hostel') || t.includes('food') || t.includes('mess'))) return true;
-    if (u.includes('she') && t.includes('she')) return true;
-    if (u.includes('ragging') && t.includes('ragging')) return true;
-    return false;
+
+    function getDeptKey(deptStr) {
+      if (deptStr.includes('plumb') || deptStr.includes('facility')) return 'plumbing';
+      if (deptStr.includes('elect') || deptStr.includes('power')) return 'electrical';
+      if (deptStr.includes('sanitat') || deptStr.includes('food') || deptStr.includes('mess') || (deptStr.includes('hostel') && !deptStr.includes('plumb'))) return 'sanitation';
+      if (deptStr.includes('it') || deptStr.includes('network') || deptStr.includes('wifi') || deptStr.includes('wi-fi')) return 'network';
+      if (deptStr.includes('she') || deptStr.includes('women') || deptStr.includes('icc')) return 'she';
+      if (deptStr.includes('ragging') || deptStr.includes('ombuds')) return 'ragging';
+      return deptStr;
+    }
+
+    const keyT = getDeptKey(t);
+    const keyU = getDeptKey(u);
+    return keyT === keyU;
   };
 
   // Helper: Identify recurring problem locations from live tickets
@@ -1507,6 +1584,10 @@
       }
 
       window.saveTickets(tickets);
+      // Sync upvote with backend so it persists across reloads
+      if (window.apiUpvoteTicket) {
+        window.apiUpvoteTicket(ticketId).catch(e => console.warn('[Upvote] Backend sync notice:', e));
+      }
       window.renderDashboard(user);
     };
 

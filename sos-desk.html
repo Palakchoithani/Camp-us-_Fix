@@ -105,14 +105,17 @@
       </a>
 
       <!-- Center: Role Navigation -->
-      <nav class="hidden md:flex items-center p-1 rounded-lg bg-surface-muted border border-border text-xs font-mono">
+      <nav class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-muted border border-border text-xs font-mono">
         <button type="button" onclick="window.switchRoleNav('student')"
-          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Student</button>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition cursor-pointer">Student</button>
         <button type="button" onclick="window.switchRoleNav('admin')"
-          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Admin</button>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition cursor-pointer">Admin</button>
         <button type="button" onclick="window.switchRoleNav('department')"
-          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Department</button>
-        <span class="px-3 py-1.5 rounded bg-primary text-white font-bold">SOS</span>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition cursor-pointer">Department</button>
+        <span class="px-3.5 py-1.5 rounded-DEFAULT bg-primary text-white font-bold flex items-center gap-1.5 shadow-xs">
+          <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+          SOS Desk
+        </span>
       </nav>
 
       <!-- Right: Direct Emergency Call Hotline & Exit -->

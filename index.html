@@ -1761,7 +1761,7 @@
           <label class="block text-xs font-mono text-white/70">
             Email ID
           </label>
-          <input id="auth-input-email" type="email" required placeholder="name@campus.edu"
+          <input id="auth-input-email" type="email" placeholder="name@campus.edu"
             class="w-full px-3 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition" />
         </div>
 
@@ -1981,7 +1981,14 @@
         const inputPass = document.getElementById('auth-input-password');
         const deptContainer = document.getElementById('auth-deptname-container');
 
-        if (inputEmail) inputEmail.value = '';
+        if (inputEmail) {
+          inputEmail.value = '';
+          inputEmail.removeAttribute('required');
+          // Department login doesn't use an email-format ID — use text type to avoid browser email validation.
+          // Student and Admin use email addresses; restore proper type for mobile keyboard & format hints.
+          inputEmail.type = (role === 'department') ? 'text' : 'email';
+          inputEmail.placeholder = (role === 'department') ? 'Optional — leave blank' : 'name@campus.edu';
+        }
 
         if (labelId) labelId.textContent = cfg.idLabel;
         if (inputId) {
@@ -2013,7 +2020,7 @@
         if (inputId) inputId.value = cfg.demoId;
         if (inputPass) inputPass.value = cfg.demoPass;
         // Keep selected department if user picked one; otherwise default to cfg.demoDeptName
-        if (selectDept && (!selectDept.value || currentActiveRole !== 'department') && cfg.demoDeptName) {
+        if (selectDept && currentActiveRole === 'department' && cfg.demoDeptName) {
           selectDept.value = cfg.demoDeptName;
         }
       };

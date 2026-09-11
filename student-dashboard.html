@@ -168,47 +168,34 @@
   <!-- Header Component with Dynamic Student Authentication Session -->
   <header class="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-surface-dim">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-      <!-- Brand & Live Telemetry Indicator -->
-      <div class="flex items-center gap-6">
-        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1"
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2.5 cursor-pointer group py-1"
           title="CAMP(US)FIX — Return to Campus Map">
           <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain transition duration-200">
-          <span
-            class="hidden sm:inline font-meta-technical text-[10px] tracking-widest text-secondary uppercase font-semibold border-l border-surface-dim pl-3 py-0.5">
-            Student Portal
-          </span>
+          <span class="font-headline font-bold text-base text-primary tracking-tight">Student Portal</span>
         </a>
-        <div class="hidden lg:flex items-center gap-2 pl-4 border-l border-surface-dim text-xs text-secondary">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34C759] opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-[#34C759]"></span>
-          </span>
-          <span class="font-semibold text-on-surface font-body-md text-body-md">Campus Active</span>
-          <span class="text-outline">•</span>
-          <span class="font-meta-technical text-meta-technical" id="telemetry-active-signals">38 Signals</span>
-        </div>
+        <span id="telemetry-active-signals" class="hidden">38 Signals</span>
       </div>
 
       <!-- Role Switcher Navigation Tabs -->
       <nav
         class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-surface-dim font-label-caps text-label-caps uppercase tracking-wider font-semibold">
-        <a aria-current="page" class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm"
+        <a aria-current="page" class="px-4 py-1.5 rounded-DEFAULT bg-primary-container text-on-primary shadow-xs font-bold"
           href="student-dashboard.html">
-          Student Portal
+          Student
         </a>
         <button type="button" onclick="window.switchRoleNav('admin')"
-          class="px-3 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          class="px-3.5 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors cursor-pointer"
           title="Admin Room">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Admin Room</span>
+          Admin
         </button>
         <button type="button" onclick="window.switchRoleNav('department')"
-          class="px-3 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          class="px-3.5 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors cursor-pointer"
           title="Department">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Department</span>
+          Department
         </button>
-        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+        <a class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
           href="sos-desk.html" id="link-sos-nav">
           <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
           SOS Desk
@@ -1274,10 +1261,8 @@
           let selectedLat = intakeModal && intakeModal._pendingLat ? intakeModal._pendingLat : null;
           let selectedLng = intakeModal && intakeModal._pendingLng ? intakeModal._pendingLng : null;
 
-          setTimeout(() => {
+          setTimeout(async () => {
             const rawId = `CP-${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
-            btnTransmit.disabled = false;
-            if (btnTransmitText) btnTransmitText.textContent = "Submit Issue";
 
             try {
               const allTickets = window.getTickets ? window.getTickets() : [];
@@ -1306,41 +1291,56 @@
 
               // Run Campus AI Analysis: Auto-categorize, Route, Recurrence Check & Priority Score
               const enriched = window.CampusAI ? window.CampusAI.analyzeTicket(rawTicket, allTickets) : rawTicket;
-              const ticketToStore = (enriched && enriched.id) ? enriched : (enriched.enrichedTicket || rawTicket);
-              allTickets.unshift(ticketToStore);
+              const aiDept = (enriched && enriched.department) ? enriched.department : "Facility Maintenance & Plumbing";
+              const baseTicket = (enriched && enriched.id) ? enriched : (enriched.enrichedTicket || rawTicket);
+              const ticketToStore = Object.assign({}, baseTicket, {
+                department: aiDept,
+                aiSuggestedDept: aiDept,
+                status: 'submitted'
+              });
 
-              // Persist to server backend database & broadcast in real-time
+              // Persist to server backend database
+              let savedTicket = ticketToStore;
               if (window.apiCreateTicket) {
-                window.apiCreateTicket(ticketToStore).catch(e => console.warn('apiCreateTicket notice:', e));
+                const res = await window.apiCreateTicket(ticketToStore);
+                if (res && res.ticket) savedTicket = res.ticket;
               }
+
+              allTickets.unshift(savedTicket);
               if (window.saveTickets) {
                 window.saveTickets(allTickets, false);
               }
 
-              showStudentToast(`Signal Transmitted! #${rawId} routed to ${enriched.department} [AI Priority: ${enriched.priorityLabel} (${enriched.priorityScore})]`, "success");
+              showStudentToast(`Signal Transmitted! #${rawId} routed to ${aiDept} [AI Priority: ${enriched.priorityLabel || 'HIGH'}]`, "success");
             } catch (err) {
               console.error("Storage error:", err);
-              showStudentToast("Failed to record ticket. Please retry.", "error");
+              showStudentToast(err.message || "Failed to record ticket. Please retry.", "error");
+              btnTransmit.disabled = false;
+              if (btnTransmitText) btnTransmitText.textContent = "Submit Issue";
+              return;
             }
+
+            btnTransmit.disabled = false;
+            if (btnTransmitText) btnTransmitText.textContent = "Submit Issue";
 
             if (titleInput) titleInput.value = "";
             if (descInput) descInput.value = "";
             if (fixtureInput) fixtureInput.value = "";
             if (aiDupAlert) aiDupAlert.classList.add('hidden');
-              // Reset photo state
-              pendingPhotoUrl = null;
-              if (photoInput) photoInput.value = '';
-              if (evidenceTitle) evidenceTitle.textContent = "Attach Photo";
-              if (evidenceSubtitle) evidenceSubtitle.textContent = "JPEG, PNG up to 10MB";
-              if (evidenceIcon) {
-                evidenceIcon.textContent = "add_a_photo";
-                evidenceIcon.classList.remove("text-[#34C759]");
-              }
+            // Reset photo state
+            pendingPhotoUrl = null;
+            if (photoInput) photoInput.value = '';
+            if (evidenceTitle) evidenceTitle.textContent = "Attach Photo";
+            if (evidenceSubtitle) evidenceSubtitle.textContent = "JPEG, PNG up to 10MB";
+            if (evidenceIcon) {
+              evidenceIcon.textContent = "add_a_photo";
+              evidenceIcon.classList.remove("text-[#34C759]");
+            }
 
             if (intakeModal) intakeModal.classList.add('hidden');
 
             renderStudentTickets();
-          }, 400);
+          }, 300);
         });
       }
 
@@ -1786,7 +1786,7 @@
         const search = feedSearch ? feedSearch.value.trim().toLowerCase() : '';
         const deptFilter = feedDeptFilter ? feedDeptFilter.value : '';
 
-        let openTickets = allTickets.filter(t => t.status !== 'resolved' && t.status !== 'resolved');
+        let openTickets = allTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed');
 
         if (deptFilter) {
           openTickets = openTickets.filter(t => t.department === deptFilter);
@@ -1885,6 +1885,9 @@
 
       // Initial Render
       renderStudentTickets();
+      if (window.fetchTicketsFromBackend) {
+        window.fetchTicketsFromBackend().then(() => renderStudentTickets());
+      }
 
       // Listen for Live Ticket Updates across Tabs / Roles
       window.addEventListener('campus:tickets-updated', () => {

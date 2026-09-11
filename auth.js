@@ -239,7 +239,12 @@
       },
       savedAt: Date.now()
     };
-    localStorage.setItem('campus_auth_session', JSON.stringify(sessionData));
+    try {
+      localStorage.setItem('campus_auth_session', JSON.stringify(sessionData));
+      localStorage.setItem(`campus_auth_session_${user.role}`, JSON.stringify(sessionData));
+      sessionStorage.setItem('campus_auth_session', JSON.stringify(sessionData));
+      sessionStorage.setItem(`campus_auth_session_${user.role}`, JSON.stringify(sessionData));
+    } catch (e) {}
 
     // Synchronize HTTP cookies for backend server verification
     try {
@@ -277,11 +282,43 @@
 
   checkGoogleOAuthReturn();
 
-  window.getCurrentSession = function () {
+  window.getCurrentSession = function (expectedRole = null) {
+    // 1. If expectedRole specified, check tab's sessionStorage first
+    if (expectedRole) {
+      try {
+        const tabRoleRaw = sessionStorage.getItem(`campus_auth_session_${expectedRole}`);
+        if (tabRoleRaw) {
+          const sess = JSON.parse(tabRoleRaw);
+          if (sess && sess.user && sess.user.role === expectedRole) return sess;
+        }
+      } catch (e) {}
+
+      try {
+        const roleRaw = localStorage.getItem(`campus_auth_session_${expectedRole}`);
+        if (roleRaw) {
+          const sess = JSON.parse(roleRaw);
+          if (sess && sess.user && sess.user.role === expectedRole) return sess;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Check tab-specific sessionStorage
+    try {
+      const tabRaw = sessionStorage.getItem('campus_auth_session');
+      if (tabRaw) {
+        const sess = JSON.parse(tabRaw);
+        if (sess && sess.user && (!expectedRole || sess.user.role === expectedRole)) return sess;
+      }
+    } catch (e) {}
+
+    // 3. Check general localStorage (only if matching expectedRole or no expectedRole specified)
     const raw = localStorage.getItem('campus_auth_session');
     if (!raw) return null;
     try {
       const session = JSON.parse(raw);
+      if (expectedRole && (!session.user || session.user.role !== expectedRole)) {
+        return null;
+      }
       // Quick expiry check
       if (Date.now() - session.savedAt > SESSION_EXPIRY_MS) {
         window.logout("Your institutional session has expired. Please sign in again.");
@@ -297,7 +334,7 @@
   // Universal Route & Role-Based Access Control (RBAC) Guard
   // --------------------------------------------------------------------------
   window.enforcePageAccess = function (allowedRole) {
-    const session = window.getCurrentSession();
+    const session = window.getCurrentSession(allowedRole);
 
     if (!session || !session.user || !session.user.role) {
       // Unauthenticated: Block display and redirect to landing page
@@ -352,9 +389,17 @@
 
   window.logout = function (reason = null) {
     try {
-      localStorage.removeItem('campus_auth_session');
-      sessionStorage.removeItem('campus_auth_session');
-      localStorage.removeItem('campus_token');
+      // Clear all generic and role-specific session keys from both storages
+      const roleKeys = ['student', 'admin', 'department'];
+      ['localStorage', 'sessionStorage'].forEach(storeName => {
+        const store = window[storeName];
+        if (!store) return;
+        store.removeItem('campus_auth_session');
+        store.removeItem('campus_token');
+        roleKeys.forEach(r => {
+          store.removeItem(`campus_auth_session_${r}`);
+        });
+      });
       sessionStorage.clear();
 
       // Expire HTTP session cookies immediately
@@ -395,10 +440,13 @@
   };
 
   // --------------------------------------------------------------------------
-  // Failed Attempt Throttling & Lockout
+  // Failed Attempt Throttling & Lockout (Role-Scoped)
+  // Lockout keys are scoped per role so a failed student login cannot lock
+  // out the admin portal and vice versa.
   // --------------------------------------------------------------------------
-  function checkLockout() {
-    const lockoutUntil = parseInt(localStorage.getItem('campus_lockout_until') || '0', 10);
+  function checkLockout(role) {
+    const key = role ? `campus_lockout_until_${role}` : 'campus_lockout_until';
+    const lockoutUntil = parseInt(localStorage.getItem(key) || '0', 10);
     if (Date.now() < lockoutUntil) {
       const remainingSec = Math.ceil((lockoutUntil - Date.now()) / 1000);
       return remainingSec;
@@ -406,18 +454,25 @@
     return 0;
   }
 
-  function recordFailedAttempt() {
-    let attempts = parseInt(localStorage.getItem('campus_failed_attempts') || '0', 10) + 1;
-    localStorage.setItem('campus_failed_attempts', attempts.toString());
+  function recordFailedAttempt(role) {
+    const attemptsKey = role ? `campus_failed_attempts_${role}` : 'campus_failed_attempts';
+    const lockoutKey = role ? `campus_lockout_until_${role}` : 'campus_lockout_until';
+    let attempts = parseInt(localStorage.getItem(attemptsKey) || '0', 10) + 1;
+    localStorage.setItem(attemptsKey, attempts.toString());
     if (attempts >= MAX_FAILED_ATTEMPTS) {
-      localStorage.setItem('campus_lockout_until', (Date.now() + LOCKOUT_DURATION_MS).toString());
-      localStorage.setItem('campus_failed_attempts', '0');
+      localStorage.setItem(lockoutKey, (Date.now() + LOCKOUT_DURATION_MS).toString());
+      localStorage.setItem(attemptsKey, '0');
       return true;
     }
     return false;
   }
 
-  function resetFailedAttempts() {
+  function resetFailedAttempts(role) {
+    const attemptsKey = role ? `campus_failed_attempts_${role}` : 'campus_failed_attempts';
+    const lockoutKey = role ? `campus_lockout_until_${role}` : 'campus_lockout_until';
+    localStorage.removeItem(attemptsKey);
+    localStorage.removeItem(lockoutKey);
+    // Also clear legacy global keys on successful login
     localStorage.removeItem('campus_failed_attempts');
     localStorage.removeItem('campus_lockout_until');
   }
@@ -426,8 +481,8 @@
   // Core Role Authentication Controller
   // --------------------------------------------------------------------------
   window.authenticateCredentials = async function ({ role, email, identifier, password, departmentName }) {
-    // 1. Lockout check
-    const lockedSec = checkLockout();
+    // 1. Lockout check (role-scoped)
+    const lockedSec = checkLockout(role);
     if (lockedSec > 0) {
       throw new Error(`Security Lockout Active: Too many failed attempts. Try again in ${lockedSec}s.`);
     }
@@ -469,7 +524,7 @@
     }
 
     if (!user) {
-      const locked = recordFailedAttempt();
+      const locked = recordFailedAttempt(role);
       if (locked) {
         throw new Error("Maximum credential failure threshold reached. System locked for 60 seconds.");
       }
@@ -506,7 +561,7 @@
     const isAdminPass = (role === 'admin' && password === 'AdminDean@2026');
 
     if (incomingHash !== user.passwordHash && !isDeptPass && !isStudentPass && !isAdminPass) {
-      const locked = recordFailedAttempt();
+      const locked = recordFailedAttempt(role);
       if (locked) {
         throw new Error("Incorrect credentials. Maximum attempts exceeded, portal locked for 60 seconds.");
       }
@@ -514,7 +569,7 @@
     }
 
     // 6. Authentication Successful
-    resetFailedAttempts();
+    resetFailedAttempts(role);
     const token = await generateBearerToken(user);
     saveSession(user, token);
 
@@ -695,19 +750,18 @@
   // Navigation Session Widget Synchronizer
   // --------------------------------------------------------------------------
   function updateNavSessionWidget() {
-    const session = window.getCurrentSession();
-    const navRight = document.querySelector('header .flex.items-center.gap-5');
-    if (!navRight) return;
-
-    let widget = document.getElementById('nav-session-widget');
-    if (!widget) {
-      widget = document.createElement('div');
-      widget.id = 'nav-session-widget';
-      widget.className = 'flex items-center gap-3';
-      navRight.prepend(widget);
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('dashboard') || path.includes('sos-desk') || path.includes('login')) {
+      const stray = document.getElementById('nav-session-widget');
+      if (stray) stray.remove();
+      return;
     }
 
-    if (!session) {
+    const widget = document.getElementById('nav-session-widget');
+    if (!widget) return;
+
+    const session = window.getCurrentSession();
+    if (!session || !session.user) {
       widget.innerHTML = '';
       return;
     }

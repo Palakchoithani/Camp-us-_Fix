@@ -86,49 +86,42 @@
 </head>
 
 <body
-  class="min-h-screen flex flex-col font-mono text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+  class="min-h-screen flex flex-col font-mono text-on-surface antialiased selection:bg-primary selection:text-on-primary" data-role="department">
 
   <!-- Header -->
   <header class="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-outline">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
 
       <!-- Brand & Active Department Badge -->
-      <div class="flex items-center gap-4">
-        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1" title="Campus Map">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2.5 cursor-pointer group py-1" title="Campus Map">
           <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain">
-          <span class="font-headline font-bold text-base sm:text-lg text-primary tracking-tight">Department</span>
+          <span class="font-headline font-bold text-base text-primary tracking-tight">Department</span>
         </a>
-        <div class="hidden sm:flex items-center gap-2 pl-3 border-l border-outline">
-          <span class="px-2.5 py-1 rounded-full bg-primary text-white text-[11px] font-bold" id="dept-badge-name">
-            Loading...
-          </span>
-          <span class="text-xs text-secondary font-semibold" id="dept-assigned-count">
-            0 Issues Assigned
-          </span>
-        </div>
+        <div class="campus-realtime-indicator flex items-center ml-1"></div>
+        <span id="dept-badge-name" class="hidden">Loading...</span>
+        <span id="dept-assigned-count" class="hidden">0 Issues Assigned</span>
       </div>
 
       <!-- Role Switcher Navigation Tabs -->
       <nav
         class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-outline font-mono text-xs uppercase tracking-wider font-semibold">
         <button type="button" onclick="window.switchRoleNav('student')"
-          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-          title="Student Portal restricted to Student credentials">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Student Portal</span>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors cursor-pointer"
+          title="Student Portal">
+          Student
         </button>
         <button type="button" onclick="window.switchRoleNav('admin')"
-          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors cursor-pointer"
           title="Admin Room">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Admin Room</span>
+          Admin
         </button>
         <a aria-current="page"
-          class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm font-bold"
+          class="px-4 py-1.5 rounded-DEFAULT bg-primary-container text-on-primary shadow-xs font-bold"
           href="department-dashboard.html">
           Department
         </a>
-        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+        <a class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
           href="sos-desk.html" id="link-sos-nav">
           <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
           SOS Desk
@@ -137,8 +130,7 @@
 
       <!-- Profile & Log Out -->
       <div class="flex items-center gap-3 text-xs">
-        <div class="campus-realtime-indicator flex items-center mr-1"></div>
-        <div class="hidden md:flex flex-col text-right pl-2 border-l border-outline">
+        <div class="hidden md:flex flex-col text-right">
           <span class="font-bold text-primary" id="dept-officer-name">OFFICER</span>
           <span class="text-[11px] text-secondary" id="dept-officer-title">Maintenance Lead</span>
         </div>
@@ -168,9 +160,20 @@
         <h1 class="font-headline font-bold text-lg sm:text-xl text-primary tracking-tight" id="dept-welcome-title">
           Assigned Issues
         </h1>
-        <p class="text-xs text-secondary mt-0.5">
-          Department: <strong class="text-primary" id="dept-scope-text">Loading...</strong>
-        </p>
+        <div class="flex items-center gap-2 mt-1 text-xs text-secondary flex-wrap">
+          <span>Active Scope:</span>
+          <select id="dept-scope-select"
+            class="bg-surface-container-low text-primary border border-outline rounded-md px-2 py-0.5 text-xs font-mono font-bold focus:outline-none focus:border-primary">
+            <option value="Facility Maintenance & Plumbing">Facility Maintenance &amp; Plumbing</option>
+            <option value="Campus Electrical & Power">Campus Electrical &amp; Power</option>
+            <option value="Hostel Sanitation & Food Services">Hostel Sanitation &amp; Food Services</option>
+            <option value="IT & Campus Network Services">IT &amp; Campus Network Services</option>
+            <option value="SHE Complaint Cell">SHE Complaint Cell</option>
+            <option value="Anti-Ragging Committee">Anti-Ragging Committee</option>
+          </select>
+          <span class="text-secondary">•</span>
+          <span class="text-[11px] text-secondary" id="dept-scope-text">Loading...</span>
+        </div>
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
@@ -380,7 +383,7 @@
       if (typeof window.enforcePageAccess === 'function') {
         if (!window.enforcePageAccess('department')) return;
       }
-      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      const session = window.getCurrentSession ? window.getCurrentSession('department') : null;
       if (!session || !session.user || session.user.role !== 'department') {
         window.location.replace('department-login.html');
         return;
@@ -388,8 +391,8 @@
       const activeDept = session.user;
 
       // Populate Department Identity
-      const deptName = activeDept.deptName || "Facility Maintenance & Plumbing";
-      const officerName = activeDept.name || "Department Officer";
+      let deptName = activeDept.deptName || "Facility Maintenance & Plumbing";
+      let officerName = activeDept.name || "Department Officer";
 
       const badgeNameEl = document.getElementById('dept-badge-name');
       const scopeTextEl = document.getElementById('dept-scope-text');
@@ -397,12 +400,35 @@
       const officerTitleEl = document.getElementById('dept-officer-title');
       const avatarEl = document.getElementById('dept-avatar');
       const footerLabelEl = document.getElementById('footer-dept-label');
+      const scopeSelectEl = document.getElementById('dept-scope-select');
 
-      if (badgeNameEl) badgeNameEl.textContent = deptName;
-      if (scopeTextEl) scopeTextEl.textContent = deptName;
-      if (officerNameEl) officerNameEl.textContent = officerName.toUpperCase();
-      if (officerTitleEl) officerTitleEl.textContent = activeDept.division || deptName;
-      if (footerLabelEl) footerLabelEl.textContent = `${deptName} [Authorized]`;
+      function updateDeptHeaderDisplay() {
+        if (badgeNameEl) badgeNameEl.textContent = deptName;
+        if (scopeTextEl) scopeTextEl.textContent = deptName;
+        if (officerNameEl) officerNameEl.textContent = officerName.toUpperCase();
+        if (officerTitleEl) officerTitleEl.textContent = activeDept.division || deptName;
+        if (footerLabelEl) footerLabelEl.textContent = `${deptName} [Authorized]`;
+        if (scopeSelectEl && scopeSelectEl.value !== deptName) {
+          scopeSelectEl.value = deptName;
+        }
+      }
+      updateDeptHeaderDisplay();
+
+      if (scopeSelectEl) {
+        scopeSelectEl.value = deptName;
+        scopeSelectEl.addEventListener('change', (e) => {
+          deptName = e.target.value;
+          activeDept.deptName = deptName;
+          updateDeptHeaderDisplay();
+          try {
+            session.user = activeDept;
+            localStorage.setItem('campus_session_department', JSON.stringify(session));
+            localStorage.setItem('campus_session', JSON.stringify(session));
+          } catch (_) {}
+          renderQueue();
+          window.toast(`Switched active department view to: ${deptName}`, 'good');
+        });
+      }
 
       if (avatarEl && officerName) {
         const parts = officerName.split(' ').filter(Boolean).map(w => w[0]);
@@ -755,50 +781,70 @@
       }
 
       // 6. Fast 1-Click Status Transitions
-      window.startWork = function (ticketId) {
-        const idx = allTickets.findIndex(t => t.id === ticketId);
-        if (idx !== -1) {
-          allTickets[idx].status = 'in_progress';
-          allTickets[idx].progress = 50;
-          allTickets[idx].currentStep = `Work started by ${officerName} (${deptName})`;
-          if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
-          allTickets[idx].timeline.push({
-            stage: 'In Progress',
-            time: 'Just now',
-            note: `Field maintenance initiated by ${officerName}.`
-          });
-
+      window.startWork = async function (ticketId) {
+        try {
+          let updatedTicket = null;
           if (window.apiUpdateStatus) {
-            window.apiUpdateStatus(ticketId, 'in_progress', `Field maintenance initiated by ${officerName}`).catch(e => console.warn(e));
+            const res = await window.apiUpdateStatus(ticketId, 'in_progress', `Field maintenance initiated by ${officerName}`);
+            if (res && res.ticket) updatedTicket = res.ticket;
+          }
+          const idx = allTickets.findIndex(t => t.id === ticketId);
+          if (idx !== -1) {
+            if (updatedTicket) {
+              allTickets[idx] = { ...allTickets[idx], ...updatedTicket };
+            } else {
+              allTickets[idx].status = 'in_progress';
+              allTickets[idx].progress = 50;
+              allTickets[idx].currentStep = `Work started by ${officerName} (${deptName})`;
+              if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
+              allTickets[idx].timeline.push({
+                stage: 'In Progress',
+                time: 'Just now',
+                note: `Field maintenance initiated by ${officerName}.`
+              });
+            }
           }
           window.saveTickets(allTickets, false);
-          window.toast(`Work started on Issue #${ticketId}. Status: In Progress.`, 'info');
+          window.toast(`Work started on Issue #${ticketId}. Status: In Progress.`, 'good');
           renderQueue();
+        } catch (err) {
+          console.error("Start work error:", err);
+          window.toast(err.message || "Failed to update status.", 'error');
         }
       };
 
-      window.markFixed = function (ticketId) {
-        const idx = allTickets.findIndex(t => t.id === ticketId);
-        if (idx !== -1) {
-          const now = Date.now();
-          allTickets[idx].status = 'fixed';
-          allTickets[idx].fixedAt = now;
-          allTickets[idx].verificationDeadline = now + (48 * 3600 * 1000); // 48 hours in ms
-          allTickets[idx].progress = 90;
-          allTickets[idx].currentStep = 'Repair marked fixed. 48-hour student verification window active.';
-          if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
-          allTickets[idx].timeline.push({
-            stage: 'Fixed — Awaiting Student Verification',
-            time: 'Just now',
-            note: `Marked fixed by ${officerName}. 48-hour student verification window opened.`
-          });
-
+      window.markFixed = async function (ticketId) {
+        try {
+          let updatedTicket = null;
           if (window.apiUpdateStatus) {
-            window.apiUpdateStatus(ticketId, 'fixed', `Marked fixed by ${officerName}`).catch(e => console.warn(e));
+            const res = await window.apiUpdateStatus(ticketId, 'fixed', `Marked fixed by ${officerName}`);
+            if (res && res.ticket) updatedTicket = res.ticket;
+          }
+          const idx = allTickets.findIndex(t => t.id === ticketId);
+          if (idx !== -1) {
+            if (updatedTicket) {
+              allTickets[idx] = { ...allTickets[idx], ...updatedTicket };
+            } else {
+              const now = Date.now();
+              allTickets[idx].status = 'fixed';
+              allTickets[idx].fixedAt = now;
+              allTickets[idx].verificationDeadline = now + (48 * 3600 * 1000); // 48 hours in ms
+              allTickets[idx].progress = 90;
+              allTickets[idx].currentStep = 'Repair marked fixed. 48-hour student verification window active.';
+              if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
+              allTickets[idx].timeline.push({
+                stage: 'Fixed — Awaiting Student Verification',
+                time: 'Just now',
+                note: `Marked fixed by ${officerName}. 48-hour student verification window opened.`
+              });
+            }
           }
           window.saveTickets(allTickets, false);
           window.toast(`Issue #${ticketId} marked fixed! Student has 48 hours to verify resolution.`, 'good');
           renderQueue();
+        } catch (err) {
+          console.error("Mark fixed error:", err);
+          window.toast(err.message || "Failed to mark issue as fixed.", 'error');
         }
       };
 
@@ -916,6 +962,14 @@
 
       // Initial Render
       renderQueue();
+      if (window.fetchTicketsFromBackend) {
+        window.fetchTicketsFromBackend().then(t => {
+          if (Array.isArray(t) && t.length > 0) {
+            allTickets = t;
+            renderQueue();
+          }
+        });
+      }
 
     })();
   </script>

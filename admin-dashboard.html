@@ -109,42 +109,34 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
 
       <!-- Brand & Active Status -->
-      <div class="flex items-center gap-5">
-        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1" title="Campus Map">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2.5 cursor-pointer group py-1" title="Campus Map">
           <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain">
           <span class="font-headline font-bold text-base sm:text-lg text-primary tracking-tight">Admin Room</span>
         </a>
-        <div class="hidden sm:flex items-center gap-2 pl-4 border-l border-outline text-xs">
-          <span
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-            <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-            <span id="hdr-active-count">0 Active Issues</span>
-          </span>
-          <div class="campus-realtime-indicator flex items-center ml-2"></div>
-        </div>
+        <div class="campus-realtime-indicator flex items-center ml-1"></div>
+        <span id="hdr-active-count" class="hidden">0 Active Issues</span>
       </div>
 
       <!-- Role Switcher Navigation Tabs -->
       <nav
         class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-outline font-mono text-xs uppercase tracking-wider font-semibold">
         <button type="button" onclick="window.switchRoleNav('student')"
-          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-          title="Student Portal restricted to Student credentials">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Student Portal</span>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors cursor-pointer"
+          title="Student Portal">
+          Student
         </button>
         <a aria-current="page"
-          class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm font-bold"
+          class="px-4 py-1.5 rounded-DEFAULT bg-primary-container text-on-primary shadow-xs font-bold"
           href="admin-dashboard.html">
           Admin Room
         </a>
         <button type="button" onclick="window.switchRoleNav('department')"
-          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-          title="Department Hub restricted to Department credentials">
-          <span class="material-symbols-outlined text-[13px]">lock</span>
-          <span>Department</span>
+          class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors cursor-pointer"
+          title="Department">
+          Department
         </button>
-        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+        <a class="px-3.5 py-1.5 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
           href="sos-desk.html" id="link-sos-nav">
           <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
           SOS Desk
@@ -975,7 +967,9 @@
 
         if (inputId) inputId.value = ticketId;
         if (sub) sub.textContent = `Assigning Issue #${ticketId}`;
-        if (select && currentDept) select.value = currentDept;
+        const t = tickets.find(item => item.id === ticketId);
+        const deptToSelect = (currentDept && currentDept !== 'Unassigned') ? currentDept : (t && t.aiSuggestedDept ? t.aiSuggestedDept : '');
+        if (select && deptToSelect) select.value = deptToSelect;
         if (modal) modal.classList.remove('hidden');
       };
 
@@ -984,55 +978,87 @@
         if (modal) modal.classList.add('hidden');
       };
 
-      window.handleAssignSubmit = function (e) {
+      window.handleAssignSubmit = async function (e) {
         if (e) e.preventDefault();
         const id = document.getElementById('assign-ticket-id').value;
         const newDept = document.getElementById('assign-department-select').value;
         const note = document.getElementById('assign-note').value;
+        const submitBtn = e && e.target ? e.target.querySelector('button[type="submit"]') : null;
 
-        const idx = tickets.findIndex(t => t.id === id);
-        if (idx !== -1) {
-          tickets[idx].department = newDept;
-          if (tickets[idx].status === 'open') {
-            tickets[idx].status = 'dispatched';
-          }
-          if (!tickets[idx].timeline) tickets[idx].timeline = [];
-          tickets[idx].timeline.push({
-            stage: 'Assigned',
-            time: 'Just now',
-            note: note || `Routed to ${newDept} by Administrator.`
-          });
+        if (!newDept) {
+          window.toast('Please select a department.', 'bad');
+          return;
+        }
 
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Assigning...';
+        }
+
+        try {
+          let updatedTicket = null;
           if (window.apiAssignDept) {
-            window.apiAssignDept(id, newDept, note).catch(e => console.warn(e));
+            const res = await window.apiAssignDept(id, newDept, note);
+            if (res && res.ticket) updatedTicket = res.ticket;
+          }
+
+          const idx = tickets.findIndex(t => t.id === id);
+          if (idx !== -1) {
+            if (updatedTicket) {
+              tickets[idx] = updatedTicket;
+            } else {
+              tickets[idx].department = newDept;
+              if (tickets[idx].status === 'open' || tickets[idx].status === 'submitted') {
+                tickets[idx].status = 'dispatched';
+              }
+              if (!tickets[idx].timeline) tickets[idx].timeline = [];
+              tickets[idx].timeline.push({
+                stage: 'Assigned',
+                time: 'Just now',
+                note: note || `Routed to ${newDept} by Administrator.`
+              });
+            }
           }
           window.saveTickets(tickets);
           window.toast(`Issue #${id} assigned to <b>${newDept}</b>`, 'good');
           window.closeAssignModal();
           renderQueue();
+        } catch (err) {
+          console.error("Assignment error:", err);
+          window.toast(err.message || "Failed to assign department. Please retry.", 'bad');
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirm Routing';
+          }
         }
       };
 
       // 7. Direct Resolution
-      window.adminDirectResolve = function (ticketId) {
+      window.adminDirectResolve = async function (ticketId) {
         if (confirm(`Mark Issue #${ticketId} as resolved?`)) {
-          const idx = tickets.findIndex(t => t.id === ticketId);
-          if (idx !== -1) {
-            tickets[idx].status = 'resolved';
-            tickets[idx].progress = 100;
-            tickets[idx].resolvedAt = Date.now();
-            if (!tickets[idx].timeline) tickets[idx].timeline = [];
-            tickets[idx].timeline.push({
-              stage: 'Resolved',
-              time: 'Just now',
-              note: `Resolved and verified by Administrator ${activeAdmin.name}.`
-            });
+          try {
             if (window.apiUpdateStatus) {
-              window.apiUpdateStatus(ticketId, 'resolved', `Resolved by Admin ${activeAdmin.name}`).catch(e => console.warn(e));
+              await window.apiUpdateStatus(ticketId, 'resolved', `Resolved by Admin ${activeAdmin.name}`);
+            }
+            const idx = tickets.findIndex(t => t.id === ticketId);
+            if (idx !== -1) {
+              tickets[idx].status = 'resolved';
+              tickets[idx].progress = 100;
+              tickets[idx].resolvedAt = Date.now();
+              if (!tickets[idx].timeline) tickets[idx].timeline = [];
+              tickets[idx].timeline.push({
+                stage: 'Resolved',
+                time: 'Just now',
+                note: `Resolved and verified by Administrator ${activeAdmin.name}.`
+              });
             }
             window.saveTickets(tickets);
             window.toast(`Issue #${ticketId} marked resolved.`, 'good');
             renderQueue();
+          } catch (err) {
+            console.error("Resolve error:", err);
+            window.toast(err.message || "Failed to resolve issue.", 'bad');
           }
         }
       };
@@ -1041,7 +1067,15 @@
       window.exportIssuesCsv = function () {
         const header = 'ID,Title,Location,Department,Category,Status,Severity,Reports,Created\n';
         const body = tickets.map(t => {
-          return `"${t.id}","${(t.title || '').replace(/"/g, '""')}","${(t.location || '').replace(/"/g, '""')}","${t.department || ''}","${t.category || ''}","${t.status || ''}","${t.severity || ''}",${t.upvotes || 1},"${new Date(t.createdAt || Date.now()).toISOString()}"`;
+          let dateStr;
+          try {
+            const rawDate = t.createdAt || t.timestamp || Date.now();
+            const d = new Date(rawDate);
+            dateStr = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+          } catch (e) {
+            dateStr = new Date().toISOString();
+          }
+          return `"${t.id}","${(t.title || '').replace(/"/g, '""')}","${(t.location || '').replace(/"/g, '""')}","${t.department || ''}","${t.category || ''}","${t.status || ''}","${t.severity || ''}",${t.upvotes || 1},"${dateStr}"`;
         }).join('\n');
 
         const blob = new Blob([header + body], { type: 'text/csv' });
@@ -1143,6 +1177,15 @@
       // Initial Render
       renderQueue();
       renderHotspots();
+      if (window.fetchTicketsFromBackend) {
+        window.fetchTicketsFromBackend().then(t => {
+          if (Array.isArray(t) && t.length > 0) {
+            tickets = t;
+            renderQueue();
+            renderHotspots();
+          }
+        });
+      }
 
     })();
   </script>

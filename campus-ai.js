@@ -303,9 +303,13 @@
     if (sev === 'critical') {
       score += 50;
       reasons.push("Critical Severity Base (+50)");
-    } else if (sev === 'high' || hasHazard) {
+    } else if (sev === 'high') {
       score += 35;
-      reasons.push(sev === 'high' ? "High Severity Base (+35)" : "Elevated Severity Base from Hazard (+35)");
+      reasons.push("High Severity Base (+35)");
+    } else if (hasHazard) {
+      // Hazard detected but not yet rated 'high' — promote to high severity scoring
+      score += 35;
+      reasons.push("Elevated Severity Base from Hazard Keywords (+35)");
     } else if (sev === 'moderate') {
       score += 20;
       reasons.push("Moderate Severity Base (+20)");
@@ -314,9 +318,13 @@
       reasons.push("Standard Severity Base (+15)");
     }
 
-    if (hasHazard) {
-      score += 30;
-      reasons.push("Safety Hazard Risk Keyword Detected (+30)");
+    // Hazard bonus: only apply if ticket isn't already scored at critical/high levels
+    // This prevents double-scoring (e.g. severity='high' + hazard keywords = +65).
+    if (hasHazard && sev !== 'critical' && sev !== 'high') {
+      score += 20;
+      reasons.push("Safety Hazard Risk Keyword Detected (+20)");
+    } else if (hasHazard) {
+      reasons.push("Safety Hazard Risk Keyword Confirmed (severity already elevated)");
     }
 
     // Factor 2: Recurrence Multiplier
@@ -608,6 +616,14 @@
     ticket.priorityRank = pInfo.priorityRank;
     ticket.priorityLabel = pInfo.priorityRank.toUpperCase();
     ticket.priorityClass = pInfo.priorityClass;
+
+    if (typeof window !== 'undefined' && typeof window.saveTickets === 'function' && Array.isArray(allTickets) && allTickets.length > 0) {
+      try {
+        window.saveTickets(allTickets, false);
+      } catch (e) {
+        console.warn('[CampusAI] Could not auto-save tickets on upvote:', e);
+      }
+    }
 
     return ticket;
   }

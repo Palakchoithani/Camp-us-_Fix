@@ -305,9 +305,9 @@ def row_to_ticket(row: sqlite3.Row, conn: Optional[sqlite3.Connection] = None) -
     t["closedBy"] = t.pop("closed_by", None)
     t["resolvedAt"] = t.pop("resolved_at", None)
     t["currentStep"] = t.pop("current_step", "")
-    t["createdAt"] = t.pop("created_at", 0)
-    t["updatedAt"] = t.pop("updated_at", 0)
-    t["notes"] = t.pop("description", "")
+    desc_val = t.pop("description", "")
+    t["notes"] = desc_val
+    t["description"] = desc_val
 
     # Retrieve timeline
     if conn:
@@ -400,8 +400,10 @@ def create_ticket(data: Dict[str, Any], actor: Optional[Dict[str, Any]] = None) 
         label = data.get("priorityLabel") or ("CRITICAL" if score >= 80 else "HIGH" if score >= 65 else "MEDIUM" if score >= 40 else "LOW")
         
         dept = data.get("department")
-        if not dept or dept in ["Unassigned", "Pending"]:
-            dept = classify_ticket_department(data.get("category", ""), f"{data.get('title', '')} {data.get('notes', '')} {data.get('description', '')}")
+        if not dept or not str(dept).strip():
+            dept = classify_ticket_department(data.get("category", ""), f"{data.get('title', '')} {data.get('description', '')}")
+        if not dept:
+            dept = "Facility Maintenance & Plumbing"
         student_id = data.get("studentId") or (actor.get("id") if actor else "2024CS0123")
         student_name = data.get("studentName") or (actor.get("name") if actor else "Student")
 
