@@ -414,7 +414,8 @@
 
     // Notify backend server to invalidate session if available
     try {
-      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+      fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
     } catch (e) {}
 
     updateNavSessionWidget();
@@ -512,14 +513,17 @@
     }
 
     const loginId = identifier || email;
+    const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+    const loginUrl = `${apiBase}/api/auth/login`;
 
     // 3. Primary Authentication via Backend API (/api/auth/login)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           userId: loginId,
           identifier: loginId,
@@ -530,7 +534,8 @@
         })
       });
 
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         if (data && data.success && data.user && data.token) {
           resetFailedAttempts(role);
@@ -550,8 +555,11 @@
           };
         }
       } else if (res.status === 401 || res.status === 400 || res.status === 403) {
-        const errData = await res.json().catch(() => ({}));
-        const msg = errData.detail || errData.message || errData.error || "Invalid institutional credentials. Please verify and try again.";
+        let msg = "Invalid institutional credentials. Please verify and try again.";
+        if (contentType.includes('application/json')) {
+          const errData = await res.json().catch(() => ({}));
+          msg = errData.detail || errData.message || errData.error || msg;
+        }
         const locked = recordFailedAttempt(role);
         if (locked) {
           throw new Error("Maximum credential failure threshold reached. System locked for 60 seconds.");

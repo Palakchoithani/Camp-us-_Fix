@@ -598,8 +598,16 @@
         return;
       }
 
-      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
+      let proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let host = window.location.host;
+      const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+      if (apiBase) {
+        try {
+          const u = new URL(apiBase);
+          host = u.host;
+          proto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+        } catch (e) {}
+      }
       let expectedRole = null;
       if (typeof window !== 'undefined') {
         if (window.location.pathname.includes('admin')) expectedRole = 'admin';
@@ -785,7 +793,12 @@
     if (token && !options.headers['Authorization']) {
       options.headers['Authorization'] = `Bearer ${token}`;
     }
-    return fetch(url, options).then(async res => {
+    options.credentials = options.credentials || 'include';
+
+    const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+    const fullUrl = (url.startsWith('/') && apiBase) ? `${apiBase}${url}` : url;
+
+    return fetch(fullUrl, options).then(async res => {
       let data = {};
       try {
         data = await res.json();
@@ -804,7 +817,8 @@
   }
 
   window.fetchTicketsFromBackend = function () {
-    return fetch('/api/tickets')
+    const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+    return fetch(`${apiBase}/api/tickets`, { credentials: 'include' })
       .then(res => res.json())
       .then(dbTickets => {
         if (Array.isArray(dbTickets)) {
