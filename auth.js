@@ -580,8 +580,50 @@
   };
 
   window.signInWithGoogleRole = async function (role = 'student', departmentName = null) {
+    resetFailedAttempts(role);
+
+    // 1. Try Firebase Auth (Zero-config on Firebase Hosting)
+    if (typeof window.firebase !== 'undefined' && window.__FIREBASE_CONFIG__ && window.__FIREBASE_CONFIG__.apiKey) {
+      try {
+        if (!window.firebase.auth) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await firebase.auth().signInWithPopup(provider);
+        if (result && result.user) {
+          const gUser = result.user;
+          const user = {
+            id: gUser.uid.slice(0, 10).toUpperCase(),
+            name: gUser.displayName || (role === 'student' ? 'Student' : 'Campus Officer'),
+            email: gUser.email,
+            role: role,
+            deptName: (role === 'department' ? (departmentName || 'Facility Maintenance & Plumbing') : null),
+            avatar: gUser.photoURL || null
+          };
+          const token = 'FB-' + btoa(JSON.stringify({ uid: gUser.uid, role, exp: Date.now() + 86400000 }));
+          saveSession(user, token);
+          return { success: true, user, token };
+        }
+      } catch (fbErr) {
+        console.warn('[Firebase Auth] Notice:', fbErr);
+        if (fbErr.code === 'auth/popup-closed-by-user') {
+          throw new Error('Sign-in cancelled.');
+        }
+        if (fbErr.code === 'auth/operation-not-allowed') {
+          throw new Error('Google Sign-In is not enabled yet in your Firebase Console. Go to Firebase Console > Authentication > Sign-in method > Enable Google. Or use Demo Institutional Login below!');
+        }
+      }
+    }
+
+    // 2. Google Identity Services (GSI) OAuth Client Fallback
     const clientId = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.GOOGLE_CLIENT_ID) || "341687061911-k4um60gt7pu01qdg4jj9ipge9hgj669i.apps.googleusercontent.com";
-    resetFailedAttempts();
 
     // Check if Google OAuth code client popup is available and can be initiated
     if (window.google && window.google.accounts && window.google.accounts.oauth2) {
@@ -621,15 +663,15 @@
             error_callback: (err) => {
               if (hasSettled) return;
               hasSettled = true;
-              console.warn("Google popup closed or blocked, falling back to full redirect...", err);
-              const loginUrl = `/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}`;
-              window.location.href = loginUrl;
+              console.warn("Google popup closed or blocked:", err);
+              reject(new Error("Google OAuth error: Please ensure https://campus-fix-20547.web.app is added to Authorized JavaScript Origins in Google Cloud Console, or use Institutional ID Login below."));
             }
           });
           client.requestCode();
         });
       } catch (e) {
-        console.warn("Google popup flow failed, falling back to standard redirect:", e);
+        console.warn("Google popup flow notice:", e);
+        throw e;
       }
     }
 
