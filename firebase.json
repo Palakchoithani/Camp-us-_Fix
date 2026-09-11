@@ -1,0 +1,23 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "requirements.txt",
+      "server.py",
+      "database.py",
+      "Procfile",
+      "Dockerfile",
+      "tests/**",
+      "campus_fix.db*"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
