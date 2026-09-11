@@ -36,6 +36,9 @@ venv.bak/
 *.db-shm
 *.db-journal
 
+# Firebase
+.firebase/
+
 # OS & Editor
 .DS_Store
 .DS_Store?

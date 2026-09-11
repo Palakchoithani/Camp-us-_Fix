@@ -1,18 +1,10 @@
-/**
- * CAMP(US) FIX — Firebase Cloud Configuration
- * 
- * 1. Go to https://console.firebase.google.com/ (100% Free, NO credit card needed).
- * 2. Click "Add project" (Name it: campus-fix).
- * 3. Go to "Project Settings" (gear icon) > Scroll down to "Your apps" > Click the Web icon (</>).
- * 4. Register app and copy the `firebaseConfig` keys below.
- * 5. In Firebase console, click "Build" > "Realtime Database" > "Create Database" > Start in "test mode".
- */
-window.__FIREBASE_CONFIG__ = window.__FIREBASE_CONFIG__ || {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+window.__FIREBASE_CONFIG__ = {
+  apiKey: "AIzaSyCn-ZsFmAo-TQYezkgGtEMxaLUMb5Npxy8",
+  authDomain: "campus-fix-20547.firebaseapp.com",
+  databaseURL: "https://campus-fix-20547-default-rtdb.firebaseio.com",
+  projectId: "campus-fix-20547",
+  storageBucket: "campus-fix-20547.firebasestorage.app",
+  messagingSenderId: "550259307116",
+  appId: "1:550259307116:web:89dc65f5737655bc209e49",
+  measurementId: "G-XKNJMCW6ZJ"
 };
