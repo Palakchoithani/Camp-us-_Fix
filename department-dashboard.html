@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Department | CAMP(US)FIX</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <!-- Leaflet GIS Map Engine & Unified Styles -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="campus-map.css" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#fef9ef",
+            "surface": "#ffffff",
+            "surface-container-low": "#fbf6ec",
+            "surface-container": "#f4ede3",
+            "surface-container-high": "#ece4d8",
+            "surface-container-highest": "#e2d9cc",
+            "primary": "#311419",
+            "primary-container": "#4a282d",
+            "on-primary": "#ffffff",
+            "secondary": "#73575b",
+            "on-surface": "#1d1c16",
+            "on-surface-variant": "#504445",
+            "outline": "#ded9d1",
+            "outline-variant": "#c9bfb4",
+            "error": "#ba1a1a",
+            "error-container": "#fee8e6",
+            "on-error-container": "#7a0e0e",
+            "success": "#1f6f43",
+            "success-container": "#e2f4e9"
+          },
+          fontFamily: {
+            "sans": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "mono": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "heading": ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    *, html, body, input, select, textarea, button, p, span, a, h1, h2, h3, h4, h5, h6, label, table, th, td, header nav, header nav * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+    }
+
+    body {
+      background-color: #fef9ef;
+      color: #1d1c16;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    .font-headline {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+  </style>
+  <script src="auth.js"></script>
+  <script>
+    // Strict Synchronous RBAC Guard
+    if (typeof window.enforcePageAccess === 'function') {
+      window.enforcePageAccess('department');
+    }
+  </script>
+</head>
+
+<body
+  class="min-h-screen flex flex-col font-mono text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-outline">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+
+      <!-- Brand & Active Department Badge -->
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1" title="Campus Map">
+          <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain">
+          <span class="font-headline font-bold text-base sm:text-lg text-primary tracking-tight">Department</span>
+        </a>
+        <div class="hidden sm:flex items-center gap-2 pl-3 border-l border-outline">
+          <span class="px-2.5 py-1 rounded-full bg-primary text-white text-[11px] font-bold" id="dept-badge-name">
+            Loading...
+          </span>
+          <span class="text-xs text-secondary font-semibold" id="dept-assigned-count">
+            0 Issues Assigned
+          </span>
+        </div>
+      </div>
+
+      <!-- Role Switcher Navigation Tabs -->
+      <nav
+        class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-outline font-mono text-xs uppercase tracking-wider font-semibold">
+        <button type="button" onclick="window.switchRoleNav('student')"
+          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Student Portal restricted to Student credentials">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Student Portal</span>
+        </button>
+        <button type="button" onclick="window.switchRoleNav('admin')"
+          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Admin Room">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Admin Room</span>
+        </button>
+        <a aria-current="page"
+          class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm font-bold"
+          href="department-dashboard.html">
+          Department
+        </a>
+        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+          href="sos-desk.html" id="link-sos-nav">
+          <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+          SOS Desk
+        </a>
+      </nav>
+
+      <!-- Profile & Log Out -->
+      <div class="flex items-center gap-3 text-xs">
+        <div class="campus-realtime-indicator flex items-center mr-1"></div>
+        <div class="hidden md:flex flex-col text-right pl-2 border-l border-outline">
+          <span class="font-bold text-primary" id="dept-officer-name">OFFICER</span>
+          <span class="text-[11px] text-secondary" id="dept-officer-title">Maintenance Lead</span>
+        </div>
+        <div
+          class="w-9 h-9 rounded-full bg-surface-container-highest border border-outline flex items-center justify-center text-primary font-bold text-xs"
+          id="dept-avatar">
+          <span>DP</span>
+        </div>
+        <button onclick="window.deptLogout()"
+          class="px-2.5 py-1.5 rounded-lg border border-outline hover:bg-surface-container-high text-secondary hover:text-error text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+          title="Sign Out">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span class="hidden sm:inline">Log Out</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+    <!-- Department Summary Bar -->
+    <div
+      class="p-4 sm:p-5 rounded-xl bg-surface border border-outline shadow-xs flex items-center justify-between gap-3">
+      <div>
+        <h1 class="font-headline font-bold text-lg sm:text-xl text-primary tracking-tight" id="dept-welcome-title">
+          Assigned Issues
+        </h1>
+        <p class="text-xs text-secondary mt-0.5">
+          Department: <strong class="text-primary" id="dept-scope-text">Loading...</strong>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- View Switcher -->
+        <div class="flex items-center p-0.5 rounded-lg bg-surface-container border border-outline text-xs">
+          <button id="dept-view-queue" type="button"
+            class="px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-[15px]">format_list_bulleted</span>
+            <span>Work Orders</span>
+          </button>
+          <button id="dept-view-map" type="button"
+            class="px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-[15px]">map</span>
+            <span>Campus Map</span>
+          </button>
+        </div>
+        <button onclick="window.location.reload()"
+          class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline text-primary font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Refresh Issues">
+          <span class="material-symbols-outlined text-[15px]">refresh</span>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 Department Metric Cards -->
+    <section>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Metric 1: Assigned Issues -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-secondary">
+            <span class="font-bold uppercase tracking-wider text-[11px]">Assigned</span>
+            <span class="material-symbols-outlined text-primary text-[20px]">inbox</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-primary tracking-tight"
+              id="kpi-assigned">0</span>
+          </div>
+          <div class="text-[11px] text-secondary">
+            Assigned to team
+          </div>
+        </div>
+
+        <!-- Metric 2: In Progress -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-blue-900 font-bold">
+            <span class="uppercase tracking-wider text-[11px]">In Progress</span>
+            <span class="material-symbols-outlined text-blue-700 text-[20px]">construction</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-blue-900 tracking-tight"
+              id="kpi-progress">0</span>
+          </div>
+          <div class="text-[11px] text-blue-800 font-semibold">
+            Work underway
+          </div>
+        </div>
+
+        <!-- Metric 3: Pending Check -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-amber-900 font-bold">
+            <span class="uppercase tracking-wider text-[11px]">Pending Check</span>
+            <span class="material-symbols-outlined text-amber-700 text-[20px]">mark_email_read</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-amber-900 tracking-tight"
+              id="kpi-pending">0</span>
+          </div>
+          <div class="text-[11px] text-amber-800 font-semibold">
+            Awaiting student check
+          </div>
+        </div>
+
+        <!-- Metric 4: Resolved -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-emerald-800 font-bold">
+            <span class="uppercase tracking-wider text-[11px]">Resolved</span>
+            <span class="material-symbols-outlined text-emerald-700 text-[20px]">check_circle</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-emerald-800 tracking-tight"
+              id="kpi-resolved">0</span>
+          </div>
+          <div class="text-[11px] text-emerald-800 font-semibold">
+            Fixed and closed
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Controls: Filter & Search -->
+    <section class="p-4 sm:p-5 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
+      <!-- Quick Filter Tabs -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <button
+          class="dept-tab active px-3 py-1.5 rounded-lg bg-primary text-white font-semibold transition-colors cursor-pointer"
+          data-filter="all">
+          All (<span id="tab-count-all">0</span>)
+        </button>
+        <button
+          class="dept-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="action_needed">
+          Needs Action (<span id="tab-count-action">0</span>)
+        </button>
+        <button
+          class="dept-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="in_progress">
+          In Progress (<span id="tab-count-progress">0</span>)
+        </button>
+        <button
+          class="dept-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="fixed">
+          Awaiting Verification (<span id="tab-count-pending">0</span>)
+        </button>
+        <button
+          class="dept-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="resolved">
+          Resolved (<span id="tab-count-resolved">0</span>)
+        </button>
+      </div>
+
+      <!-- Search & Sort -->
+      <div class="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
+        <div class="relative flex-1 min-w-[220px]">
+          <span
+            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[16px]">search</span>
+          <input type="search" id="input-dept-search" placeholder="Search assigned issues..."
+            class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-container-low border border-outline text-xs text-primary placeholder:text-secondary focus:outline-none focus:border-primary font-mono" />
+        </div>
+
+        <select id="select-dept-sort"
+          class="bg-surface-container-low text-primary border border-outline rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary">
+          <option value="urgent">Sort: Priority</option>
+          <option value="recent">Sort: Newest</option>
+        </select>
+
+        <button id="btn-dept-reset"
+          class="px-3 py-2 rounded-lg bg-surface-container text-secondary hover:text-primary font-mono text-xs cursor-pointer border border-outline transition-colors"
+          title="Reset Filters">
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <!-- Work Queue Container -->
+    <section id="dept-work-queue" class="space-y-3">
+      <!-- Populated dynamically -->
+    </section>
+
+    <!-- Campus Map View -->
+    <section id="dept-campus-map-section" class="space-y-4 hidden">
+      <div id="dept-campus-map-container"
+        class="rounded-2xl overflow-hidden border border-outline p-4 sm:p-6 bg-surface shadow-xs">
+        <!-- Rendered dynamically by window.initCampusMap -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-outline bg-surface-container-low/50">
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-secondary">
+      <div class="flex items-center gap-2">
+        <span class="font-headline font-bold text-primary">CAMP(US)FIX</span>
+        <span>•</span>
+        <span>Department</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="footer-dept-label">Authorized Department Staff</span>
+        <span>•</span>
+        <a href="sos-desk.html" class="text-error font-semibold hover:underline">Emergency Desk</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div
+    class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-primary text-white px-5 py-3.5 rounded-xl shadow-xl flex items-center gap-3 max-w-md border border-outline pointer-events-none"
+    id="toast-banner">
+    <span class="material-symbols-outlined text-[20px]" id="toast-icon">check_circle</span>
+    <div class="flex-1">
+      <div class="font-headline font-bold text-sm leading-snug" id="toast-title">Notice</div>
+      <div class="text-xs text-neutral-300 mt-0.5" id="toast-desc">Action completed.</div>
+    </div>
+    <button class="text-neutral-400 hover:text-white cursor-pointer" onclick="window.dismissToast()">
+      <span class="material-symbols-outlined text-[16px]">close</span>
+    </button>
+  </div>
+
+  <!-- Scripts -->
+  <script src="env.config.js"></script>
+  <script src="auth.js"></script>
+  <script src="campus-ai.js"></script>
+  <script src="dashboards.js"></script>
+  <!-- Leaflet GIS Engine & Unified Campus Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="campus-map.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // 1. Strict RBAC Session Check
+      if (typeof window.enforcePageAccess === 'function') {
+        if (!window.enforcePageAccess('department')) return;
+      }
+      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      if (!session || !session.user || session.user.role !== 'department') {
+        window.location.replace('department-login.html');
+        return;
+      }
+      const activeDept = session.user;
+
+      // Populate Department Identity
+      const deptName = activeDept.deptName || "Facility Maintenance & Plumbing";
+      const officerName = activeDept.name || "Department Officer";
+
+      const badgeNameEl = document.getElementById('dept-badge-name');
+      const scopeTextEl = document.getElementById('dept-scope-text');
+      const officerNameEl = document.getElementById('dept-officer-name');
+      const officerTitleEl = document.getElementById('dept-officer-title');
+      const avatarEl = document.getElementById('dept-avatar');
+      const footerLabelEl = document.getElementById('footer-dept-label');
+
+      if (badgeNameEl) badgeNameEl.textContent = deptName;
+      if (scopeTextEl) scopeTextEl.textContent = deptName;
+      if (officerNameEl) officerNameEl.textContent = officerName.toUpperCase();
+      if (officerTitleEl) officerTitleEl.textContent = activeDept.division || deptName;
+      if (footerLabelEl) footerLabelEl.textContent = `${deptName} [Authorized]`;
+
+      if (avatarEl && officerName) {
+        const parts = officerName.split(' ').filter(Boolean).map(w => w[0]);
+        avatarEl.textContent = (parts[0] + (parts[1] || parts[0])).toUpperCase();
+      }
+
+      // 2. Data Store & State
+      let allTickets = window.getTickets ? window.getTickets() : [];
+      let currentFilter = 'all';
+      let expandedId = null;
+
+      // Toast Notifications
+      window.toast = function (msg, kind = 'info') {
+        const banner = document.getElementById('toast-banner');
+        const titleEl = document.getElementById('toast-title');
+        const descEl = document.getElementById('toast-desc');
+        const iconEl = document.getElementById('toast-icon');
+        if (!banner) return;
+
+        if (titleEl) titleEl.textContent = kind === 'warn' ? 'Attention' : (kind === 'good' ? 'Success' : 'Notice');
+        if (descEl) descEl.innerHTML = msg;
+        if (iconEl) iconEl.textContent = kind === 'warn' ? 'warning' : (kind === 'good' ? 'check_circle' : 'info');
+
+        banner.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+        banner.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+
+        if (window._toastTimer) clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(() => window.dismissToast(), 3200);
+      };
+
+      window.dismissToast = function () {
+        const banner = document.getElementById('toast-banner');
+        if (banner) {
+          banner.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+          banner.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+        }
+      };
+
+      // 3. Strict Department Scoping (Only show tickets assigned to THIS department)
+      function getDeptTickets() {
+        allTickets = window.getTickets ? window.getTickets() : [];
+        return allTickets.filter(t => {
+          if (!t.department) return false;
+          return window.matchesDepartment ? window.matchesDepartment(t.department, deptName) : t.department.toLowerCase().includes(deptName.toLowerCase());
+        });
+      }
+
+      function formatTimeAgo(ts) {
+        if (!ts) return 'Recent';
+        const mins = Math.round((Date.now() - ts) / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.round(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.round(hours / 24)}d ago`;
+      }
+
+      function getPriorityBadge(t) {
+        // Use unified CampusAI engine when available
+        if (window.CampusAI) {
+          const result = window.CampusAI.calculatePriority(t, t.recurrenceCount || 1);
+          return { label: `AI: ${result.priorityRank} (${result.score})`, cls: result.priorityClass, rank: result.score };
+        }
+        const pScore = t.priorityScore || (t.severity === 'critical' ? 85 : t.severity === 'high' ? 70 : t.severity === 'moderate' ? 50 : 30);
+        const pLabel = t.priorityLabel || (pScore >= 80 ? 'CRITICAL' : pScore >= 65 ? 'HIGH' : pScore >= 40 ? 'MEDIUM' : 'LOW');
+        if (pLabel === 'CRITICAL' || pScore >= 80) {
+          return { label: `AI: ${pLabel} (${pScore})`, cls: 'bg-error-container text-error border-error/30 font-bold', rank: pScore };
+        }
+        if (pLabel === 'HIGH' || pScore >= 65) {
+          return { label: `AI: ${pLabel} (${pScore})`, cls: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold', rank: pScore };
+        }
+        if (pLabel === 'MEDIUM' || pScore >= 40) {
+          return { label: `AI: ${pLabel} (${pScore})`, cls: 'bg-blue-100 text-blue-900 border-blue-300 font-semibold', rank: pScore };
+        }
+        return { label: `AI: ${pLabel} (${pScore})`, cls: 'bg-surface-container text-secondary border-outline', rank: pScore };
+      }
+
+      // escapeHtml utility
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function getStatusBadge(status) {
+        if (status === 'resolved') {
+          return { label: 'Resolved', cls: 'bg-success-container text-success border-emerald-300 font-bold' };
+        }
+        if (status === 'fixed' || status === 'verification_required') {
+          return { label: 'Fixed (Awaiting Student Verification)', cls: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold' };
+        }
+        if (status === 'reopened') {
+          return { label: 'Reopened by Student', cls: 'bg-red-100 text-red-900 border-red-300 font-bold' };
+        }
+        if (status === 'in_progress') {
+          return { label: 'In Progress', cls: 'bg-blue-100 text-blue-900 border-blue-300 font-bold' };
+        }
+        return { label: 'Assigned (New)', cls: 'bg-surface-container text-primary border-outline' };
+      }
+
+      // 4. Update Department KPIs & Filter Counts
+      function updateKPIs(deptTickets) {
+        const activeCount = deptTickets.filter(t => t.status !== 'resolved').length;
+        const progressCount = deptTickets.filter(t => t.status === 'in_progress').length;
+        const pendingCount = deptTickets.filter(t => t.status === 'fixed' || t.status === 'verification_required').length;
+        const resolvedCount = deptTickets.filter(t => t.status === 'resolved').length;
+        const actionCount = deptTickets.filter(t => t.status !== 'resolved' && t.status !== 'in_progress' && t.status !== 'fixed' && t.status !== 'verification_required').length;
+
+        // Top Metrics
+        document.getElementById('dept-assigned-count').textContent = `${activeCount} Issues Assigned`;
+        document.getElementById('kpi-assigned').textContent = activeCount;
+        document.getElementById('kpi-progress').textContent = progressCount;
+        document.getElementById('kpi-pending').textContent = pendingCount;
+        document.getElementById('kpi-resolved').textContent = resolvedCount;
+
+        // Tabs
+        document.getElementById('tab-count-all').textContent = deptTickets.length;
+        document.getElementById('tab-count-action').textContent = actionCount;
+        document.getElementById('tab-count-progress').textContent = progressCount;
+        document.getElementById('tab-count-pending').textContent = pendingCount;
+        document.getElementById('tab-count-resolved').textContent = resolvedCount;
+      }
+
+      // 5. Render Queue (Fast & Responsive)
+      const container = document.getElementById('dept-work-queue');
+      const inputSearch = document.getElementById('input-dept-search');
+      const selectSort = document.getElementById('select-dept-sort');
+
+      function renderQueue() {
+        const deptTickets = getDeptTickets();
+        updateKPIs(deptTickets);
+
+        const search = (inputSearch ? inputSearch.value.trim().toLowerCase() : '');
+        const sortBy = (selectSort ? selectSort.value : 'urgent');
+
+        let rows = deptTickets.filter(t => {
+          const isFixedStatus = (t.status === 'fixed' || t.status === 'verification_required');
+
+          // Status tab filter
+          if (currentFilter === 'action_needed' && (t.status === 'resolved' || t.status === 'in_progress' || isFixedStatus)) return false;
+          if (currentFilter === 'in_progress' && t.status !== 'in_progress') return false;
+          if ((currentFilter === 'fixed' || currentFilter === 'verification_required') && !isFixedStatus) return false;
+          if (currentFilter === 'resolved' && t.status !== 'resolved') return false;
+
+          // Search
+          if (search) {
+            const hay = `${t.id} ${t.title} ${t.location} ${t.notes || ''} ${t.studentName || ''}`.toLowerCase();
+            if (!hay.includes(search)) return false;
+          }
+
+          return true;
+        });
+
+        // Sort
+        rows.sort((a, b) => {
+          if (sortBy === 'urgent') {
+            const rankA = getPriorityBadge(a).rank;
+            const rankB = getPriorityBadge(b).rank;
+            return rankB - rankA;
+          }
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+
+        if (rows.length === 0) {
+          container.innerHTML = `
+            <div class="p-12 text-center rounded-xl bg-surface border border-outline text-secondary text-xs">
+              <span class="material-symbols-outlined text-[40px] text-outline-variant mb-2">done_all</span>
+              <p class="font-bold text-primary text-sm">No work orders currently in this view.</p>
+              <p class="text-xs text-secondary mt-1">All issues assigned to ${deptName} are up to date.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = rows.map(t => {
+          const isExpanded = expandedId === t.id;
+          const stat = getStatusBadge(t.status);
+          const priority = getPriorityBadge(t);
+          const isFixedStatus = (t.status === 'fixed' || t.status === 'verification_required');
+          const isReopened = (t.status === 'reopened');
+
+          // Action button logic: Dept CANNOT close fixed issues. Only student or 48h auto-close can close!
+          let actionBtn = '';
+          if (isReopened) {
+            actionBtn = `
+              <button onclick="event.stopPropagation(); window.startWork('${t.id}')" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition-colors shadow-xs flex items-center gap-1 cursor-pointer text-xs" title="Student reported defect still unresolved. Resume inspection.">
+                <span class="material-symbols-outlined text-[15px]">restart_alt</span>
+                <span>Resume Work</span>
+              </button>
+            `;
+          } else if (t.status !== 'in_progress' && !isFixedStatus && t.status !== 'resolved') {
+            actionBtn = `
+              <button onclick="event.stopPropagation(); window.startWork('${t.id}')" class="px-3.5 py-1.5 rounded-lg bg-primary text-white font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1 cursor-pointer text-xs">
+                <span class="material-symbols-outlined text-[15px]">play_arrow</span>
+                <span>Start Work</span>
+              </button>
+            `;
+          } else if (t.status === 'in_progress') {
+            actionBtn = `
+              <button onclick="event.stopPropagation(); window.markFixed('${t.id}')" class="px-3.5 py-1.5 rounded-lg bg-emerald-700 text-white font-bold hover:bg-emerald-800 transition-colors shadow-xs flex items-center gap-1 cursor-pointer text-xs" title="Mark repair fixed. Hand off to student for 48h verification.">
+                <span class="material-symbols-outlined text-[15px]">done_all</span>
+                <span>Mark Fixed</span>
+              </button>
+            `;
+          } else if (isFixedStatus) {
+            let countdown = '48h window active';
+            if (t.verificationDeadline) {
+              const diff = t.verificationDeadline - Date.now();
+              if (diff > 0) {
+                const hours = Math.floor(diff / (3600 * 1000));
+                const mins = Math.floor((diff % (3600 * 1000)) / (60 * 1000));
+                countdown = `${hours}h ${mins}m left`;
+              } else {
+                countdown = 'Auto-closing...';
+              }
+            }
+            actionBtn = `
+              <div class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-[11px] font-bold flex items-center gap-1.5 shadow-xs" title="Department resolution complete. Awaiting Student confirmation or 48-hour auto-close. Department cannot manually close.">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700 animate-pulse">hourglass_top</span>
+                  <span>Awaiting Student Sign-off</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-200/90 text-amber-950 font-mono text-[10px]">${countdown}</span>
+                </span>
+              </div>
+            `;
+          } else {
+            const isAutoClosed = (t.closureType === 'auto_closed');
+            actionBtn = `
+              <span class="px-2.5 py-1 rounded-lg bg-success-container text-success font-bold text-xs border border-emerald-300 flex items-center gap-1" title="${isAutoClosed ? 'Auto-closed after 48-hour timeout with no student response' : 'Student-verified resolution'}">
+                <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                <span>${isAutoClosed ? 'Auto-Closed (48h)' : 'Student Verified'}</span>
+              </span>
+            `;
+          }
+
+          return `
+            <div class="p-4 sm:p-5 rounded-xl bg-surface border ${isExpanded ? 'border-primary ring-1 ring-primary/20' : 'border-outline'} shadow-xs hover:border-outline-variant transition-all" data-id="${t.id}">
+              
+              <!-- Card Header & Actions -->
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                
+                <!-- Left: Info -->
+                <div class="flex-1 min-w-0 dept-toggle-trigger cursor-pointer">
+                  <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span class="font-mono text-xs font-bold text-primary">#${t.id}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] border ${stat.cls}">${stat.label}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] border ${priority.cls}">${priority.label}</span>
+                    ${t.isRecurring ? `
+                      <span class="px-2 py-0.5 rounded-full text-[11px] bg-purple-100 text-purple-900 border border-purple-300 font-bold">
+                        🔁 Recurring
+                      </span>
+                    ` : ''}
+                    ${t.duplicateOf ? `
+                      <span class="px-2 py-0.5 rounded-full text-[11px] bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                        🔗 Duplicate of #${t.duplicateOf}
+                      </span>
+                    ` : ''}
+                  </div>
+
+                  <h3 class="font-headline font-bold text-base text-primary leading-snug break-words">${t.title}</h3>
+
+                  <div class="text-xs text-secondary mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="flex items-center gap-1 text-on-surface font-semibold">
+                      <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span>
+                      <span>${t.location}</span>
+                    </span>
+                    <span>•</span>
+                    <span>Reported by: <strong class="text-primary">${t.studentName || 'Student'}</strong></span>
+                    <span>•</span>
+                    <span class="font-mono text-[11px] text-secondary">${formatTimeAgo(t.createdAt)}</span>
+                  </div>
+                </div>
+
+                <!-- Right: Action Button & Details Toggle -->
+                <div class="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                  ${actionBtn}
+                  <button type="button" class="dept-toggle-btn px-2.5 py-1.5 rounded-lg border border-outline bg-surface-container hover:bg-surface-container-high text-primary text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    title="${isExpanded ? 'Hide details' : 'View details'}">
+                    <span>${isExpanded ? 'Hide' : 'Details'}</span>
+                    <span class="material-symbols-outlined text-[16px] transition-transform ${isExpanded ? 'rotate-180' : ''}">expand_more</span>
+                  </button>
+                </div>
+
+              </div>
+
+              <!-- Problem Summary -->
+              <div class="mt-3 text-xs text-on-surface-variant leading-relaxed">
+                ${t.notes ? t.notes : 'Field repair requested by student.'}
+              </div>
+
+              <!-- Collapsible Expanded Details -->
+              ${isExpanded ? `
+                <div class="mt-3.5 pt-3.5 border-t border-outline space-y-3 text-xs" data-detail="${t.id}">
+                  <div class="flex items-center justify-between text-[11px] p-2.5 bg-surface-container-low rounded-lg border border-outline">
+                    <span class="text-secondary">Student ID: <strong class="text-primary font-mono">${escapeHtml(t.studentId || 'Verified')}</strong></span>
+                    <span class="text-secondary">Current Status: <strong class="text-primary">${escapeHtml(t.currentStep || stat.label)}</strong></span>
+                  </div>
+
+                  ${t.photoUrl ? `
+                    <div class="space-y-1.5">
+                      <div class="text-[11px] font-bold text-primary uppercase flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">photo_camera</span>
+                        Student's Photo Evidence
+                      </div>
+                      <div class="relative group rounded-lg overflow-hidden border border-outline cursor-pointer max-w-xs" onclick="window.open('${t.photoUrl}','_blank')">
+                        <img src="${t.photoUrl}" alt="Student Issue Photo" class="w-full h-40 object-cover rounded-lg" onerror="this.closest('.relative').style.display='none'" loading="lazy" decoding="async" />
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span class="material-symbols-outlined text-white text-[28px]">open_in_full</span>
+                        </div>
+                        <div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px]">View Full</div>
+                      </div>
+                    </div>
+                  ` : ''}
+
+                  <!-- Timeline -->
+                  ${t.timeline && t.timeline.length ? `
+                    <div class="space-y-1.5 p-3 rounded-lg bg-surface-container-low/40 border border-outline">
+                      <div class="text-[11px] font-bold uppercase text-secondary">Activity History</div>
+                      <div class="space-y-1">
+                        ${t.timeline.map(step => `
+                          <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-primary">• ${escapeHtml(step.stage)}: ${escapeHtml(step.note)}</span>
+                            <span class="text-secondary font-mono">${escapeHtml(step.time)}</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+
+            </div>
+          `;
+        }).join('');
+
+        // Expand/Collapse Click Listener
+        container.querySelectorAll('.dept-toggle-trigger, .dept-toggle-btn').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = el.closest('[data-id]');
+            const id = card ? card.getAttribute('data-id') : null;
+            expandedId = (expandedId === id ? null : id);
+            renderQueue();
+          });
+        });
+      }
+
+      // 6. Fast 1-Click Status Transitions
+      window.startWork = function (ticketId) {
+        const idx = allTickets.findIndex(t => t.id === ticketId);
+        if (idx !== -1) {
+          allTickets[idx].status = 'in_progress';
+          allTickets[idx].progress = 50;
+          allTickets[idx].currentStep = `Work started by ${officerName} (${deptName})`;
+          if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
+          allTickets[idx].timeline.push({
+            stage: 'In Progress',
+            time: 'Just now',
+            note: `Field maintenance initiated by ${officerName}.`
+          });
+
+          if (window.apiUpdateStatus) {
+            window.apiUpdateStatus(ticketId, 'in_progress', `Field maintenance initiated by ${officerName}`).catch(e => console.warn(e));
+          }
+          window.saveTickets(allTickets, false);
+          window.toast(`Work started on Issue #${ticketId}. Status: In Progress.`, 'info');
+          renderQueue();
+        }
+      };
+
+      window.markFixed = function (ticketId) {
+        const idx = allTickets.findIndex(t => t.id === ticketId);
+        if (idx !== -1) {
+          const now = Date.now();
+          allTickets[idx].status = 'fixed';
+          allTickets[idx].fixedAt = now;
+          allTickets[idx].verificationDeadline = now + (48 * 3600 * 1000); // 48 hours in ms
+          allTickets[idx].progress = 90;
+          allTickets[idx].currentStep = 'Repair marked fixed. 48-hour student verification window active.';
+          if (!allTickets[idx].timeline) allTickets[idx].timeline = [];
+          allTickets[idx].timeline.push({
+            stage: 'Fixed — Awaiting Student Verification',
+            time: 'Just now',
+            note: `Marked fixed by ${officerName}. 48-hour student verification window opened.`
+          });
+
+          if (window.apiUpdateStatus) {
+            window.apiUpdateStatus(ticketId, 'fixed', `Marked fixed by ${officerName}`).catch(e => console.warn(e));
+          }
+          window.saveTickets(allTickets, false);
+          window.toast(`Issue #${ticketId} marked fixed! Student has 48 hours to verify resolution.`, 'good');
+          renderQueue();
+        }
+      };
+
+      // Rule enforcement: Department cannot close fixed issues; final closure is student-only or 48h auto-close
+      window.markResolved = function (ticketId) {
+        window.toast(`Permission denied: Only the student or 48-hour system auto-close can resolve a fixed issue.`, 'error');
+      };
+
+      // 7. Filter Tabs & Search Listeners
+      document.querySelectorAll('.dept-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          currentFilter = tab.getAttribute('data-filter');
+          document.querySelectorAll('.dept-tab').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white');
+            b.classList.add('bg-surface-container', 'text-secondary');
+          });
+          tab.classList.remove('bg-surface-container', 'text-secondary');
+          tab.classList.add('bg-primary', 'text-white');
+          renderQueue();
+        });
+      });
+
+      if (inputSearch) inputSearch.addEventListener('input', renderQueue);
+      if (selectSort) selectSort.addEventListener('change', renderQueue);
+
+      const btnReset = document.getElementById('btn-dept-reset');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => {
+          if (inputSearch) inputSearch.value = '';
+          if (selectSort) selectSort.value = 'urgent';
+          currentFilter = 'all';
+          document.querySelectorAll('.dept-tab').forEach(b => {
+            if (b.getAttribute('data-filter') === 'all') {
+              b.classList.add('bg-primary', 'text-white');
+              b.classList.remove('bg-surface-container', 'text-secondary');
+            } else {
+              b.classList.remove('bg-primary', 'text-white');
+              b.classList.add('bg-surface-container', 'text-secondary');
+            }
+          });
+          renderQueue();
+        });
+      }
+
+      // 8. Department Sign Out
+      window.deptLogout = function () {
+        if (confirm("Are you sure you want to sign out?")) {
+          if (typeof window.logout === 'function') {
+            window.logout("Department session ended.");
+          } else {
+            localStorage.removeItem('campus_auth_session');
+            window.location.href = 'index.html';
+          }
+        }
+      };
+
+      // 9. View Switcher (Work Orders vs Campus Map)
+      const btnViewQueue = document.getElementById('dept-view-queue');
+      const btnViewMap = document.getElementById('dept-view-map');
+      const workQueueContainer = document.getElementById('dept-work-queue');
+      const deptMapSection = document.getElementById('dept-campus-map-section');
+      const deptFiltersSection = workQueueContainer ? workQueueContainer.previousElementSibling : null;
+      let deptMapInstance = null;
+
+      function initDeptMap() {
+        if (!deptMapInstance && window.initCampusMap) {
+          deptMapInstance = window.initCampusMap('dept-campus-map-container', {
+            role: 'department',
+            deptFilter: deptName,
+            onRaiseTicket: (loc) => {
+              window.toast(`Location selected: ${loc}`, 'info');
+            }
+          });
+        } else if (deptMapInstance) {
+          deptMapInstance.refresh();
+          if (deptMapInstance.map) deptMapInstance.map.invalidateSize();
+        }
+      }
+
+      if (btnViewQueue && btnViewMap) {
+        btnViewQueue.addEventListener('click', () => {
+          btnViewQueue.className = "px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          btnViewMap.className = "px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          if (workQueueContainer) workQueueContainer.classList.remove('hidden');
+          if (deptFiltersSection) deptFiltersSection.classList.remove('hidden');
+          if (deptMapSection) deptMapSection.classList.add('hidden');
+        });
+
+        btnViewMap.addEventListener('click', () => {
+          btnViewMap.className = "px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          btnViewQueue.className = "px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          if (workQueueContainer) workQueueContainer.classList.add('hidden');
+          if (deptFiltersSection) deptFiltersSection.classList.add('hidden');
+          if (deptMapSection) deptMapSection.classList.remove('hidden');
+          initDeptMap();
+        });
+      }
+
+      // Live Ticket Update Listener across tabs / roles
+      window.addEventListener('campus:tickets-updated', () => {
+        allTickets = window.getTickets ? window.getTickets() : [];
+        renderQueue();
+      });
+
+      // Cross-device polling every 30 seconds — skips when tab is hidden
+      setInterval(() => {
+        if (document.hidden) return;
+        if (window.syncTicketsWithBackend) {
+          window.syncTicketsWithBackend().then(() => {
+            allTickets = window.getTickets ? window.getTickets() : [];
+            renderQueue();
+          }).catch(() => {});
+        }
+      }, 30000);
+
+      // Initial Render
+      renderQueue();
+
+    })();
+  </script>
+</body>
+
+</html>

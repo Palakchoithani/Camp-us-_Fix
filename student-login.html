@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Login | CAMP(US)FIX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: '#150c0e',
+            'wine-primary': '#5D3136',
+            'wine-bright': '#8a4048'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Plus Jakarta Sans"', 'sans-serif'],
+            body: ['"Plus Jakarta Sans"', 'sans-serif'],
+            heading: ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="auth.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    *, html, body, input, select, textarea, button, p, span, a, h1, h2, h3, h4, h5, h6, label, [role="tablist"], [role="tablist"] * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    body {
+      background-color: #0a0506;
+      color: #f2ede4;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+    }
+
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body
+  class="min-h-screen flex flex-col items-center justify-center p-4 bg-[#0a0506] antialiased selection:bg-[#5D3136] selection:text-white">
+
+  <div
+    class="w-full max-w-sm bg-[#12090b] border border-white/10 rounded-xl p-6 sm:p-8 space-y-6 text-[#f2ede4] shadow-2xl">
+
+    <!-- Project Logo -->
+    <div class="text-center pt-1">
+      <a href="index.html" class="inline-block" title="CAMP(US)FIX Home">
+        <img src="logo_white.png" alt="CAMP(US)FIX" class="h-7 mx-auto object-contain">
+      </a>
+    </div>
+
+    <!-- Role Options / Tabs (Visible on Student, Admin, and Department) -->
+    <div class="flex p-1 rounded-lg bg-[#0a0506] border border-white/10 text-xs font-mono" role="tablist">
+      <button id="role-tab-student" type="button" onclick="window.switchAuthRole('student')" role="tab"
+        class="role-tab-btn flex-1 py-2 text-center rounded-md bg-[#5D3136] text-white font-bold shadow-sm transition cursor-pointer">
+        Student
+      </button>
+      <button id="role-tab-admin" type="button" onclick="window.switchAuthRole('admin')" role="tab"
+        class="role-tab-btn flex-1 py-2 text-center rounded-md text-white/50 hover:text-white transition cursor-pointer">
+        Admin Room
+      </button>
+      <button id="role-tab-department" type="button" onclick="window.switchAuthRole('department')" role="tab"
+        class="role-tab-btn flex-1 py-2 text-center rounded-md text-white/50 hover:text-white transition cursor-pointer">
+        Department
+      </button>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="auth-modal-error"
+      class="hidden text-xs text-[#f87171] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-md p-2.5 font-mono">
+      <span id="auth-error-text">Authentication failed.</span>
+    </div>
+
+    <!-- Clean Login Form -->
+    <form id="auth-credentials-form" onsubmit="window.handleAuthFormSubmit(event)" class="space-y-3.5">
+      <!-- Field 1: Email ID -->
+      <div class="space-y-1">
+        <label class="block text-xs font-mono text-white/70">
+          Email ID
+        </label>
+        <input id="auth-input-email" type="email" required placeholder="name@campus.edu"
+          class="w-full px-3 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition" />
+      </div>
+
+      <!-- Field 2: Role-Specific Identifier -->
+      <div class="space-y-1">
+        <label id="auth-label-id" class="block text-xs font-mono text-white/70">
+          Registration Number
+        </label>
+        <input id="auth-input-id" type="text" required placeholder="Enter registration number"
+          class="w-full px-3 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition" />
+      </div>
+
+      <!-- Field 3: Department Name (Department Role Only) -->
+      <div id="auth-deptname-container" class="space-y-1 hidden">
+        <label class="block text-xs font-mono text-white/70">
+          Department Name
+        </label>
+        <select id="auth-input-deptname"
+          class="w-full px-3 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition">
+          <option value="Facility Maintenance & Plumbing">Facility Maintenance &amp; Plumbing</option>
+          <option value="Campus Electrical & Power">Campus Electrical &amp; Power</option>
+          <option value="Hostel Sanitation & Food Services">Hostel Sanitation &amp; Food Services</option>
+          <option value="IT & Campus Network Services">IT &amp; Campus Network Services</option>
+          <option value="SHE Complaint Cell">SHE Complaint Cell</option>
+          <option value="Anti-Ragging Committee">Anti-Ragging Committee</option>
+        </select>
+      </div>
+
+      <!-- Field 4: Password with Show/Hide Toggle -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-mono text-white/70">
+            Password
+          </label>
+          <button type="button" onclick="window.togglePasswordVisibility()" tabindex="-1"
+            class="text-[11px] text-white/40 hover:text-white transition cursor-pointer font-mono flex items-center gap-1">
+            <span id="label-toggle-password">Show</span>
+          </button>
+        </div>
+        <div class="relative flex items-center">
+          <input id="auth-input-password" type="password" required placeholder="Enter password"
+            autocomplete="current-password"
+            class="w-full pl-3 pr-10 py-2 bg-[#0a0506] text-white rounded-md border border-white/15 focus:border-[#5D3136] focus:outline-none font-mono text-xs transition" />
+          <button type="button" id="btn-toggle-password" onclick="window.togglePasswordVisibility()"
+            class="absolute right-2 z-10 text-white/50 hover:text-white transition p-1 cursor-pointer focus:outline-none flex items-center justify-center"
+            title="Show or hide password" aria-label="Toggle password visibility">
+            <!-- Eye open icon (displayed when password is hidden) -->
+            <svg id="eye-icon-show" class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor"
+              stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <!-- Eye slashed icon (displayed when password is visible) -->
+            <svg id="eye-icon-hide" class="w-4 h-4 hidden pointer-events-none" fill="none" stroke="currentColor"
+              stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Login & Continue with Google -->
+      <div class="pt-2 space-y-2.5">
+        <button id="btn-submit-auth" type="submit"
+          class="w-full py-2.5 px-4 rounded-md bg-[#5D3136] hover:bg-[#733c43] text-white font-medium text-xs tracking-wider transition duration-150 flex items-center justify-center cursor-pointer">
+          <span id="btn-submit-text">Log In</span>
+        </button>
+
+        <div class="relative flex items-center justify-center py-0.5">
+          <div class="w-full border-t border-white/10"></div>
+          <span class="absolute bg-[#12090b] px-2 text-[10px] font-mono text-white/40">OR</span>
+        </div>
+
+        <button id="btn-google-auth" type="button" onclick="window.handleGoogleSignInClick()"
+          class="w-full py-2 px-4 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/15 text-white/90 font-medium text-xs transition duration-150 flex items-center justify-center gap-2.5 cursor-pointer">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+            <path fill="#EA4335"
+              d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z" />
+            <path fill="#4285F4"
+              d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+            <path fill="#FBBC05"
+              d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 12s.7 2.3 1.9 4.7l3.7-1.9z" />
+            <path fill="#34A853"
+              d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z" />
+          </svg>
+          <span id="btn-google-text">Continue with Google</span>
+        </button>
+      </div>
+
+      <!-- Minimal Demo Helper -->
+      <div class="text-center pt-0.5">
+        <button type="button" onclick="window.autofillDemoCredentials()"
+          class="text-[11px] text-white/35 hover:text-white/70 transition underline cursor-pointer">
+          Fill demo credentials
+        </button>
+      </div>
+    </form>
+
+    <!-- Return to map -->
+    <div class="text-center pt-2 border-t border-white/10">
+      <a href="index.html"
+        class="text-xs text-white/50 hover:text-white transition flex items-center justify-center gap-1">
+        <span>← Back to Campus Map</span>
+      </a>
+    </div>
+  </div>
+
+  <script src="env.config.js"></script>
+  <script src="auth.js"></script>
+  <script src="dashboards.js"></script>
+
+  <script>
+      (function () {
+        let currentActiveRole = 'student';
+
+        const ROLE_CONFIGS = {
+          student: {
+            title: "Student Login | CAMP(US)FIX",
+            demoEmail: "aarav.senapati@campus.edu",
+            idLabel: "Registration Number",
+            idPlaceholder: "Enter registration number",
+            demoId: "2024CS0123",
+            demoPass: "StudentPass@2026"
+          },
+          admin: {
+            title: "Admin Room Login | CAMP(US)FIX",
+            demoEmail: "dean.sharma@campus.edu",
+            idLabel: "Employee ID",
+            idPlaceholder: "Enter employee ID",
+            demoId: "EMP-ADM-001",
+            demoPass: "AdminDean@2026"
+          },
+          department: {
+            title: "Department Login | CAMP(US)FIX",
+            demoEmail: "dispatch@campus.edu",
+            idLabel: "Department ID",
+            idPlaceholder: "Enter department ID",
+            demoId: "DEPT-OPS-01",
+            demoPass: "DeptOps@2026",
+            demoDeptName: "Facility Maintenance & Plumbing"
+          }
+        };
+
+        window.togglePasswordVisibility = function () {
+          const inputPass = document.getElementById('auth-input-password');
+          const eyeShow = document.getElementById('eye-icon-show');
+          const eyeHide = document.getElementById('eye-icon-hide');
+          const btnToggle = document.getElementById('btn-toggle-password');
+          const labelToggle = document.getElementById('label-toggle-password');
+          if (!inputPass) return;
+
+          if (inputPass.type === 'password') {
+            inputPass.type = 'text';
+            if (eyeShow) eyeShow.classList.add('hidden');
+            if (eyeHide) eyeHide.classList.remove('hidden');
+            if (btnToggle) btnToggle.setAttribute('aria-label', 'Hide password');
+            if (labelToggle) labelToggle.textContent = 'Hide';
+          } else {
+            inputPass.type = 'password';
+            if (eyeShow) eyeShow.classList.remove('hidden');
+            if (eyeHide) eyeHide.classList.add('hidden');
+            if (btnToggle) btnToggle.setAttribute('aria-label', 'Show password');
+            if (labelToggle) labelToggle.textContent = 'Show';
+          }
+        };
+
+        window.resetPasswordVisibility = function () {
+          const inputPass = document.getElementById('auth-input-password');
+          const eyeShow = document.getElementById('eye-icon-show');
+          const eyeHide = document.getElementById('eye-icon-hide');
+          const btnToggle = document.getElementById('btn-toggle-password');
+          const labelToggle = document.getElementById('label-toggle-password');
+          if (inputPass) inputPass.type = 'password';
+          if (eyeShow) eyeShow.classList.remove('hidden');
+          if (eyeHide) eyeHide.classList.add('hidden');
+          if (btnToggle) btnToggle.setAttribute('aria-label', 'Show password');
+          if (labelToggle) labelToggle.textContent = 'Show';
+        };
+
+        window.switchAuthRole = function (role) {
+          if (!ROLE_CONFIGS[role]) role = 'student';
+          currentActiveRole = role;
+          const cfg = ROLE_CONFIGS[role];
+
+          document.title = cfg.title;
+          window.resetPasswordVisibility();
+
+          // Update Tab Active Highlights
+          ['student', 'admin', 'department'].forEach(r => {
+            const tab = document.getElementById(`role-tab-${r}`);
+            if (!tab) return;
+            if (r === role) {
+              tab.className = "role-tab-btn flex-1 py-2 text-center rounded-md bg-[#5D3136] text-white font-bold shadow-sm transition cursor-pointer";
+            } else {
+              tab.className = "role-tab-btn flex-1 py-2 text-center rounded-md text-white/50 hover:text-white transition cursor-pointer";
+            }
+          });
+
+          // Update Labels & Inputs
+          const inputEmail = document.getElementById('auth-input-email');
+          const labelId = document.getElementById('auth-label-id');
+          const inputId = document.getElementById('auth-input-id');
+          const inputPass = document.getElementById('auth-input-password');
+          const deptContainer = document.getElementById('auth-deptname-container');
+
+          if (inputEmail) inputEmail.value = '';
+
+          if (labelId) labelId.textContent = cfg.idLabel;
+          if (inputId) {
+            inputId.placeholder = cfg.idPlaceholder;
+            inputId.value = '';
+          }
+          if (inputPass) inputPass.value = '';
+
+          if (deptContainer) {
+            if (role === 'department') {
+              deptContainer.classList.remove('hidden');
+            } else {
+              deptContainer.classList.add('hidden');
+            }
+          }
+
+          const errBox = document.getElementById('auth-modal-error');
+          if (errBox) errBox.classList.add('hidden');
+
+          try {
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('role', role);
+            window.history.replaceState({}, '', newUrl);
+          } catch (e) { }
+        };
+
+        window.autofillDemoCredentials = function () {
+          const cfg = ROLE_CONFIGS[currentActiveRole];
+          const inputEmail = document.getElementById('auth-input-email');
+          const inputId = document.getElementById('auth-input-id');
+          const inputPass = document.getElementById('auth-input-password');
+          const selectDept = document.getElementById('auth-input-deptname');
+
+          if (inputEmail) inputEmail.value = cfg.demoEmail;
+          if (inputId) inputId.value = cfg.demoId;
+          if (inputPass) inputPass.value = cfg.demoPass;
+          if (selectDept && (!selectDept.value || currentActiveRole !== 'department') && cfg.demoDeptName) {
+            selectDept.value = cfg.demoDeptName;
+          }
+        };
+
+        window.handleAuthFormSubmit = async function (e) {
+          if (e) e.preventDefault();
+          const submitBtn = document.getElementById('btn-submit-auth');
+          const submitText = document.getElementById('btn-submit-text');
+          const errBox = document.getElementById('auth-modal-error');
+          const errText = document.getElementById('auth-error-text');
+
+          const inputEmail = document.getElementById('auth-input-email');
+          const inputId = document.getElementById('auth-input-id');
+          const inputPass = document.getElementById('auth-input-password');
+          const selectDept = document.getElementById('auth-input-deptname');
+
+          const email = inputEmail ? inputEmail.value : '';
+          const identifier = inputId ? inputId.value : '';
+          const password = inputPass ? inputPass.value : '';
+          const departmentName = selectDept ? selectDept.value : '';
+
+          if (errBox) errBox.classList.add('hidden');
+
+          submitBtn.disabled = true;
+          const originalBtnText = submitText.textContent;
+          submitText.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
+
+          try {
+            const authResult = await window.authenticateCredentials({
+              role: currentActiveRole,
+              email,
+              identifier,
+              password,
+              departmentName
+            });
+
+            submitText.textContent = "✓";
+
+            setTimeout(() => {
+              submitBtn.disabled = false;
+              submitText.textContent = originalBtnText;
+
+              // Route to target dashboard or return_to destination
+              const urlParams = new URLSearchParams(window.location.search);
+              const returnTo = urlParams.get('return_to');
+
+              if (currentActiveRole === 'student') {
+                window.location.href = (returnTo && returnTo.startsWith('student-dashboard.html')) ? returnTo : 'student-dashboard.html';
+                return;
+              }
+              if (currentActiveRole === 'admin') {
+                window.location.href = 'admin-dashboard.html';
+                return;
+              }
+              if (currentActiveRole === 'department') {
+                window.location.href = 'department-dashboard.html';
+                return;
+              }
+            }, 300);
+
+          } catch (err) {
+            submitBtn.disabled = false;
+            submitText.textContent = originalBtnText;
+            if (errBox && errText) {
+              errText.textContent = err.message || "Authentication rejected.";
+              errBox.classList.remove('hidden');
+            }
+            if (window.showToast) {
+              window.showToast(err.message || "Authentication rejected.", "error");
+            }
+          }
+        };
+
+        window.handleGoogleSignInClick = async function () {
+          const text = document.getElementById('btn-google-text');
+          const errBox = document.getElementById('auth-modal-error');
+          const errText = document.getElementById('auth-error-text');
+
+          if (errBox) errBox.classList.add('hidden');
+          const originalText = text ? text.textContent : 'Continue with Google';
+          if (text) text.innerHTML = '<span class="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Connecting...';
+
+          try {
+            const selectDept = document.getElementById('auth-input-deptname');
+            const departmentName = selectDept ? selectDept.value : '';
+            const authResult = await window.signInWithGoogleRole(currentActiveRole, departmentName);
+            if (text) text.textContent = "✓ Connected";
+
+            setTimeout(() => {
+              if (text) text.textContent = originalText;
+              const urlParams = new URLSearchParams(window.location.search);
+              const returnTo = urlParams.get('return_to');
+
+              if (currentActiveRole === 'student') {
+                window.location.href = (returnTo && returnTo.startsWith('student-dashboard.html')) ? returnTo : 'student-dashboard.html';
+                return;
+              }
+              if (currentActiveRole === 'admin') {
+                window.location.href = 'admin-dashboard.html';
+                return;
+              }
+              if (currentActiveRole === 'department') {
+                window.location.href = 'department-dashboard.html';
+                return;
+              }
+            }, 300);
+
+          } catch (err) {
+            if (text) text.textContent = originalText;
+            if (errBox && errText) {
+              errText.textContent = err.message || "Google authentication failed.";
+              errBox.classList.remove('hidden');
+            }
+          }
+        };
+
+        // Set initial role from query parameter or default to student
+        const urlParams = new URLSearchParams(window.location.search);
+        const roleParam = urlParams.get('role');
+        if (roleParam && ROLE_CONFIGS[roleParam]) {
+          window.switchAuthRole(roleParam);
+        } else {
+          window.switchAuthRole('student');
+        }
+
+        // Handle OAuth callback errors if returning from Google
+        const errorParam = urlParams.get('error');
+        if (errorParam) {
+          const errBox = document.getElementById('auth-modal-error');
+          const errText = document.getElementById('auth-error-text');
+          if (errBox && errText) {
+            errText.textContent = errorParam === 'access_denied'
+              ? "Google access was denied. Ensure your Google account is added under 'Test users' in Google Cloud Console."
+              : decodeURIComponent(errorParam);
+            errBox.classList.remove('hidden');
+          }
+        }
+      })();
+  </script>
+</body>
+
+</html>

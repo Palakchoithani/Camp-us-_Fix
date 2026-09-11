@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Admin Room | CAMP(US)FIX</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <!-- Leaflet GIS Map Engine & Unified Styles -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="campus-map.css" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#fef9ef",
+            "surface": "#ffffff",
+            "surface-container-low": "#fbf6ec",
+            "surface-container": "#f4ede3",
+            "surface-container-high": "#ece4d8",
+            "surface-container-highest": "#e2d9cc",
+            "primary": "#311419",
+            "primary-container": "#4a282d",
+            "on-primary": "#ffffff",
+            "secondary": "#73575b",
+            "on-surface": "#1d1c16",
+            "on-surface-variant": "#504445",
+            "outline": "#ded9d1",
+            "outline-variant": "#c9bfb4",
+            "error": "#ba1a1a",
+            "error-container": "#fee8e6",
+            "on-error-container": "#7a0e0e",
+            "success": "#1f6f43",
+            "success-container": "#e2f4e9"
+          },
+          fontFamily: {
+            "sans": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "mono": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "heading": ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    *, html, body, input, select, textarea, button, p, span, a, h1, h2, h3, h4, h5, h6, label, table, th, td, header nav, header nav * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+    }
+
+    body {
+      background-color: #fef9ef;
+      color: #1d1c16;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    .font-headline {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .toast-animate {
+      animation: toastIn 0.2s ease-out forwards;
+    }
+  </style>
+  <script src="auth.js"></script>
+  <script>
+    // Strict Synchronous RBAC Guard
+    if (typeof window.enforcePageAccess === 'function') {
+      window.enforcePageAccess('admin');
+    }
+  </script>
+</head>
+
+<body
+  class="min-h-screen flex flex-col font-mono text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-outline">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+
+      <!-- Brand & Active Status -->
+      <div class="flex items-center gap-5">
+        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1" title="Campus Map">
+          <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain">
+          <span class="font-headline font-bold text-base sm:text-lg text-primary tracking-tight">Admin Room</span>
+        </a>
+        <div class="hidden sm:flex items-center gap-2 pl-4 border-l border-outline text-xs">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+            <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+            <span id="hdr-active-count">0 Active Issues</span>
+          </span>
+          <div class="campus-realtime-indicator flex items-center ml-2"></div>
+        </div>
+      </div>
+
+      <!-- Role Switcher Navigation Tabs -->
+      <nav
+        class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-outline font-mono text-xs uppercase tracking-wider font-semibold">
+        <button type="button" onclick="window.switchRoleNav('student')"
+          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Student Portal restricted to Student credentials">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Student Portal</span>
+        </button>
+        <a aria-current="page"
+          class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm font-bold"
+          href="admin-dashboard.html">
+          Admin Room
+        </a>
+        <button type="button" onclick="window.switchRoleNav('department')"
+          class="px-3 py-1.5 rounded-DEFAULT text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Department Hub restricted to Department credentials">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Department</span>
+        </button>
+        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+          href="sos-desk.html" id="link-sos-nav">
+          <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+          SOS Desk
+        </a>
+      </nav>
+
+      <!-- Profile & Log Out -->
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex flex-col text-right">
+          <span class="text-xs font-bold text-primary" id="admin-profile-name">PROF. S. SHARMA</span>
+          <span class="text-[11px] text-secondary" id="admin-profile-role">Campus Administrator</span>
+        </div>
+        <div
+          class="w-9 h-9 rounded-full bg-surface-container-highest border border-outline flex items-center justify-center text-primary font-bold text-xs"
+          id="admin-avatar">
+          <span>SS</span>
+        </div>
+        <button onclick="window.adminLogout()"
+          class="px-2.5 py-1.5 rounded-lg border border-outline hover:bg-surface-container-high text-secondary hover:text-error text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+          title="Sign Out">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span class="hidden sm:inline">Log Out</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+    <!-- Top 4 Summary Cards -->
+    <section>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Card 1: Active Issues -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-secondary">
+            <span class="font-bold uppercase tracking-wider text-[11px]">Active Issues</span>
+            <span class="material-symbols-outlined text-primary text-[20px]">assignment</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-primary tracking-tight"
+              id="kpi-active">0</span>
+          </div>
+          <div class="text-[11px] text-secondary">
+            Currently open
+          </div>
+        </div>
+
+        <!-- Card 2: Recurring Issues -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-amber-900 font-bold">
+            <span class="uppercase tracking-wider text-[11px]">Recurring Issues</span>
+            <span class="material-symbols-outlined text-amber-700 text-[20px]">repeat</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-amber-900 tracking-tight"
+              id="kpi-recurring">0</span>
+          </div>
+          <div class="text-[11px] text-amber-800 font-semibold">
+            Repeated at same spot
+          </div>
+        </div>
+
+        <!-- Card 3: Pending Verification -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-primary font-bold">
+            <span class="uppercase tracking-wider text-[11px]">Pending Verification</span>
+            <span class="material-symbols-outlined text-secondary text-[20px]">fact_check</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-primary tracking-tight"
+              id="kpi-pending">0</span>
+          </div>
+          <div class="text-[11px] text-secondary">
+            Awaiting student check
+          </div>
+        </div>
+
+        <!-- Card 4: Resolved -->
+        <div class="p-5 rounded-xl bg-surface border border-outline shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-emerald-800 font-bold">
+            <span class="uppercase tracking-wider text-[11px]">Resolved</span>
+            <span class="material-symbols-outlined text-emerald-700 text-[20px]">check_circle</span>
+          </div>
+          <div class="my-2 flex items-baseline">
+            <span class="font-headline text-3xl sm:text-4xl font-bold text-emerald-800 tracking-tight"
+              id="kpi-resolved">0</span>
+          </div>
+          <div class="text-[11px] text-emerald-800 font-semibold">
+            Fixed and closed
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AI Recurrence & Hotspot Intelligence Section -->
+    <section id="ai-hotspot-section" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
+          <h2 class="font-headline font-bold text-lg text-primary tracking-tight">AI Recurrence &amp; Hotspot Intelligence</h2>
+          <span id="hotspot-count-badge" class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 text-[11px] font-bold border border-purple-300">0 Clusters</span>
+        </div>
+        <button id="btn-toggle-hotspot" type="button" class="text-xs text-secondary hover:text-primary font-semibold flex items-center gap-1 cursor-pointer transition-colors">
+          <span id="hotspot-toggle-label">Hide</span>
+          <span class="material-symbols-outlined text-[16px]" id="hotspot-toggle-icon">expand_less</span>
+        </button>
+      </div>
+
+      <div id="hotspot-panel" class="space-y-3">
+        <!-- Populated dynamically by renderHotspots() -->
+        <div id="hotspot-cards-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div class="p-8 text-center rounded-xl bg-surface border border-outline text-secondary text-xs col-span-full">
+            <span class="material-symbols-outlined text-[32px] text-outline-variant mb-2 block">analytics</span>
+            <p class="font-bold text-primary text-sm">No recurring hotspots detected yet.</p>
+            <p class="text-xs text-secondary mt-1">Hotspot clusters appear when 2+ issues occur at the same campus location.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls Bar: Search & Filter -->
+    <section class="p-4 sm:p-5 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-outline">
+        <div>
+          <h2 class="font-headline font-bold text-lg text-primary tracking-tight">Issues</h2>
+          <p class="text-xs text-secondary mt-0.5">Assign, prioritize, and track campus issues.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- View Switcher -->
+          <div class="flex items-center p-0.5 rounded-lg bg-surface-container border border-outline text-xs">
+            <button id="btn-view-table" type="button"
+              class="px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[15px]">table_rows</span>
+              <span>Issues List</span>
+            </button>
+            <button id="btn-view-map" type="button"
+              class="px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[15px]">map</span>
+              <span>Campus Map</span>
+            </button>
+          </div>
+          <button onclick="window.exportIssuesCsv()"
+            class="px-3 py-1.5 rounded-lg border border-outline bg-surface-container hover:bg-surface-container-high text-primary font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">download</span>
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Filter Pills -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <button
+          class="status-tab active px-3 py-1.5 rounded-lg bg-primary text-white font-semibold transition-colors cursor-pointer"
+          data-filter="all">
+          All (<span id="tab-count-all">0</span>)
+        </button>
+        <button
+          class="status-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="recurring">
+          🔁 Recurring (<span id="tab-count-recurring">0</span>)
+        </button>
+        <button
+          class="status-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="unassigned">
+          Needs Department (<span id="tab-count-unassigned">0</span>)
+        </button>
+        <button
+          class="status-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="in_progress">
+          In Progress (<span id="tab-count-progress">0</span>)
+        </button>
+        <button
+          class="status-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="fixed">
+          Pending Verification (<span id="tab-count-pending">0</span>)
+        </button>
+        <button
+          class="status-tab px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold transition-colors cursor-pointer"
+          data-filter="resolved">
+          Resolved (<span id="tab-count-resolved">0</span>)
+        </button>
+      </div>
+
+      <!-- Search & Department Select -->
+      <div class="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
+        <div class="relative flex-1 min-w-[220px]">
+          <span
+            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[16px]">search</span>
+          <input type="search" id="input-search" placeholder="Search issues, locations, or departments..."
+            class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-container-low border border-outline text-xs text-primary placeholder:text-secondary focus:outline-none focus:border-primary font-mono" />
+        </div>
+
+        <select id="select-dept"
+          class="bg-surface-container-low text-primary border border-outline rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary">
+          <option value="">All Departments</option>
+          <option value="Facility Maintenance & Plumbing">Facility Maintenance &amp; Plumbing</option>
+          <option value="Campus Electrical & Power">Campus Electrical &amp; Power</option>
+          <option value="Hostel Sanitation & Food Services">Hostel Sanitation &amp; Food Services</option>
+          <option value="IT & Campus Network Services">IT &amp; Campus Network Services</option>
+          <option value="SHE Complaint Cell">SHE Complaint Cell</option>
+          <option value="Anti-Ragging Committee">Anti-Ragging Committee</option>
+        </select>
+
+        <select id="select-sort"
+          class="bg-surface-container-low text-primary border border-outline rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary">
+          <option value="priority">Sort: Priority</option>
+          <option value="recent">Sort: Newest</option>
+          <option value="reports">Sort: Most Reports</option>
+        </select>
+
+        <button id="btn-reset"
+          class="px-3 py-2 rounded-lg bg-surface-container text-secondary hover:text-primary font-mono text-xs cursor-pointer border border-outline transition-colors"
+          title="Reset Filters">
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <!-- Issues List -->
+    <section id="issues-container" class="space-y-3">
+      <!-- Populated dynamically -->
+    </section>
+
+    <!-- Campus Map View -->
+    <section id="admin-campus-map-section" class="space-y-4 hidden">
+      <div id="admin-campus-map-container"
+        class="rounded-2xl overflow-hidden border border-outline p-4 sm:p-6 bg-surface shadow-xs">
+        <!-- Rendered dynamically by window.initCampusMap -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-outline bg-surface-container-low/50">
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-secondary">
+      <div class="flex items-center gap-2">
+        <span class="font-headline font-bold text-primary">CAMP(US)FIX</span>
+        <span>•</span>
+        <span>Admin Room</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span>Logged in as Administrator</span>
+        <span>•</span>
+        <a href="sos-desk.html" class="text-error font-semibold hover:underline">Emergency Desk</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div
+    class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-primary text-white px-5 py-3.5 rounded-xl shadow-xl flex items-center gap-3 max-w-md border border-outline pointer-events-none"
+    id="toast-banner">
+    <span class="material-symbols-outlined text-[20px]" id="toast-icon">check_circle</span>
+    <div class="flex-1">
+      <div class="font-headline font-bold text-sm leading-snug" id="toast-title">Notice</div>
+      <div class="text-xs text-neutral-300 mt-0.5" id="toast-desc">Action completed.</div>
+    </div>
+    <button class="text-neutral-400 hover:text-white cursor-pointer" onclick="window.dismissToast()">
+      <span class="material-symbols-outlined text-[16px]">close</span>
+    </button>
+  </div>
+
+  <!-- MODAL: Assign Department -->
+  <div id="modal-assign"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-surface rounded-xl border border-outline p-6 max-w-md w-full space-y-4 shadow-xl">
+      <div class="flex items-center justify-between pb-3 border-b border-outline">
+        <div>
+          <h3 class="font-headline font-bold text-lg text-primary">Assign Department</h3>
+          <p class="text-xs text-secondary" id="modal-assign-subtitle">Assign responsible maintenance department.</p>
+        </div>
+        <button onclick="window.closeAssignModal()"
+          class="text-secondary hover:text-primary text-xl cursor-pointer">✕</button>
+      </div>
+
+      <form id="form-assign" onsubmit="window.handleAssignSubmit(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="assign-ticket-id" />
+
+        <div>
+          <label class="block font-bold text-primary mb-1">Select Department</label>
+          <select id="assign-department-select" required
+            class="w-full bg-surface-container border border-outline rounded-lg p-2.5 text-xs text-primary focus:outline-none focus:border-primary">
+            <option value="Facility Maintenance & Plumbing">Facility Maintenance &amp; Plumbing</option>
+            <option value="Campus Electrical & Power">Campus Electrical &amp; Power</option>
+            <option value="Hostel Sanitation & Food Services">Hostel Sanitation &amp; Food Services</option>
+            <option value="IT & Campus Network Services">IT &amp; Campus Network Services</option>
+            <option value="SHE Complaint Cell">SHE Complaint Cell</option>
+            <option value="Anti-Ragging Committee">Anti-Ragging Committee</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-primary mb-1">Admin Instruction / Note (Optional)</label>
+          <input type="text" id="assign-note" placeholder="e.g. Expedited assignment by Dean."
+            class="w-full bg-surface-container border border-outline rounded-lg p-2.5 text-xs text-primary focus:outline-none focus:border-primary" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline">
+          <button type="button" onclick="window.closeAssignModal()"
+            class="px-4 py-2 rounded-lg bg-surface-container text-secondary hover:text-primary font-semibold text-xs cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit"
+            class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-xs cursor-pointer transition-colors shadow-xs">
+            Save Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="env.config.js"></script>
+  <script src="auth.js"></script>
+  <script src="campus-ai.js"></script>
+  <script src="dashboards.js"></script>
+  <!-- Leaflet GIS Engine & Unified Campus Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="campus-map.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // 1. Strict RBAC Session Check
+      if (typeof window.enforcePageAccess === 'function') {
+        if (!window.enforcePageAccess('admin')) return;
+      }
+      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      if (!session || !session.user || session.user.role !== 'admin') {
+        window.location.replace('admin-login.html');
+        return;
+      }
+      const activeAdmin = session.user;
+
+      // Populate Admin Profile
+      const nameEl = document.getElementById('admin-profile-name');
+      const avatarEl = document.getElementById('admin-avatar');
+      if (nameEl) nameEl.textContent = (activeAdmin.name || "Prof. S. Sharma").toUpperCase();
+      if (avatarEl && activeAdmin.name) {
+        const initials = activeAdmin.name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        avatarEl.textContent = initials || 'SS';
+      }
+
+      // 2. State & Data Store
+      let tickets = window.getTickets ? window.getTickets() : [];
+      let currentFilter = 'all';
+      let expandedId = null;
+
+      // Toast Notifications
+      window.toast = function (msg, kind = 'info') {
+        const banner = document.getElementById('toast-banner');
+        const titleEl = document.getElementById('toast-title');
+        const descEl = document.getElementById('toast-desc');
+        const iconEl = document.getElementById('toast-icon');
+        if (!banner) return;
+
+        if (titleEl) titleEl.textContent = kind === 'warn' ? 'Attention' : (kind === 'good' ? 'Success' : 'Notice');
+        if (descEl) descEl.innerHTML = msg;
+        if (iconEl) iconEl.textContent = kind === 'warn' ? 'warning' : (kind === 'good' ? 'check_circle' : 'info');
+
+        banner.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+        banner.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+
+        if (window._toastTimer) clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(() => window.dismissToast(), 3200);
+      };
+
+      window.dismissToast = function () {
+        const banner = document.getElementById('toast-banner');
+        if (banner) {
+          banner.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+          banner.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+        }
+      };
+
+      // 3. Helper Calculations: Recurring & Priority (unified via CampusAI)
+      function getNormalizedLoc(ticket) {
+        return (ticket.location || '').toLowerCase().split('•')[0].trim();
+      }
+
+      function calculatePriority(ticket, recurringCount) {
+        // Use unified CampusAI engine when available
+        if (window.CampusAI) {
+          const result = window.CampusAI.calculatePriority(ticket, recurringCount);
+          return {
+            label: result.badgeText || result.priorityRank,
+            cls: result.priorityClass,
+            rank: result.score
+          };
+        }
+        // Fallback
+        let score = 0;
+        if (ticket.severity === 'critical') score += 50;
+        else if (ticket.severity === 'high') score += 35;
+        else if (ticket.severity === 'moderate') score += 20;
+        else score += 10;
+        if (recurringCount >= 2) score += (recurringCount * 12);
+        score += Math.min(25, (ticket.upvotes || 1) * 3);
+        const hoursOpen = Math.round((Date.now() - (ticket.createdAt || Date.now())) / (3600 * 1000));
+        if (hoursOpen > 24) score += 15;
+        if (score >= 60 || ticket.severity === 'critical') {
+          return { label: 'High Priority', cls: 'bg-error-container text-error border-error/30 font-bold', rank: score };
+        } else if (score >= 35) {
+          return { label: 'Medium Priority', cls: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold', rank: score };
+        }
+        return { label: 'Normal', cls: 'bg-surface-container text-secondary border-outline', rank: score };
+      }
+
+      // 3b. AI Hotspot Intelligence Renderer
+      function renderHotspots() {
+        const container = document.getElementById('hotspot-cards-container');
+        const badge = document.getElementById('hotspot-count-badge');
+        if (!container) return;
+
+        const allTickets = tickets;
+        if (!window.CampusAI || !window.CampusAI.analyzeCampusHotspots) {
+          return;
+        }
+
+        const analysis = window.CampusAI.analyzeCampusHotspots(allTickets);
+        const hotspots = analysis.hotspots || [];
+
+        if (badge) badge.textContent = `${hotspots.length} Cluster${hotspots.length !== 1 ? 's' : ''}`;
+
+        if (hotspots.length === 0) {
+          container.innerHTML = `
+            <div class="p-8 text-center rounded-xl bg-surface border border-outline text-secondary text-xs col-span-full">
+              <span class="material-symbols-outlined text-[32px] text-outline-variant mb-2 block">analytics</span>
+              <p class="font-bold text-primary text-sm">No recurring hotspots detected yet.</p>
+              <p class="text-xs text-secondary mt-1">Hotspot clusters appear when 2+ issues are reported at the same campus location.</p>
+            </div>`;
+          return;
+        }
+
+        const sevColor = { critical: 'bg-error-container text-error border-error/30', high: 'bg-amber-100 text-amber-900 border-amber-300', moderate: 'bg-yellow-50 text-yellow-800 border-yellow-300', low: 'bg-surface-container text-secondary border-outline' };
+        const sevIcon = { critical: 'emergency', high: 'warning', moderate: 'info', low: 'circle' };
+
+        container.innerHTML = hotspots.map(h => {
+          const sev = h.highestSeverity || 'low';
+          const topCat = Object.keys(h.categories).sort((a, b) => h.categories[b] - h.categories[a])[0] || 'general';
+          const rec = h.aiRecommendation || {};
+          const locShort = (h.locationName || '').split('•')[0].trim();
+          return `
+            <div class="p-4 rounded-xl bg-surface border border-purple-200 shadow-xs hover:border-purple-400 transition-all cursor-pointer hotspot-cluster-card" data-location="${(h.locationName || '').replace(/"/g,'&quot;')}">
+              <div class="flex items-start justify-between gap-2 mb-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5 mb-1">
+                    <span class="material-symbols-outlined text-purple-600 text-[16px]">location_on</span>
+                    <span class="font-bold text-sm text-primary truncate">${locShort}</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] border ${sevColor[sev] || sevColor.low} font-bold">
+                    <span class="material-symbols-outlined text-[11px] align-text-bottom">${sevIcon[sev] || 'circle'}</span>
+                    ${sev.toUpperCase()} SEVERITY
+                  </span>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-2xl font-bold text-purple-700">${h.totalReports}</div>
+                  <div class="text-[10px] text-secondary">reports</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                <div class="p-1.5 rounded-lg bg-surface-container">
+                  <div class="text-base font-bold text-amber-700">${h.activeReports}</div>
+                  <div class="text-[10px] text-secondary">Active</div>
+                </div>
+                <div class="p-1.5 rounded-lg bg-surface-container">
+                  <div class="text-base font-bold text-emerald-700">${h.resolvedReports}</div>
+                  <div class="text-[10px] text-secondary">Resolved</div>
+                </div>
+                <div class="p-1.5 rounded-lg bg-surface-container">
+                  <div class="text-base font-bold text-primary">${h.resolutionRate || 0}%</div>
+                  <div class="text-[10px] text-secondary">Fix Rate</div>
+                </div>
+              </div>
+
+              <div class="text-[11px] text-secondary mb-1">Predominant Issue: <strong class="text-primary">${topCat}</strong>${h.primaryDepartment ? ` &bull; Dept: <strong class="text-primary">${h.primaryDepartment.split(' ')[0]}</strong>` : ''}</div>
+
+              <div class="mt-2.5 p-2.5 rounded-lg bg-purple-50 border border-purple-200 flex gap-2">
+                <span class="material-symbols-outlined text-purple-500 text-[15px] mt-0.5 shrink-0">psychology</span>
+                <p class="text-[11px] text-purple-900 leading-relaxed font-medium">${rec.recommendation || 'Investigate recurring root cause.'}</p>
+              </div>
+
+              <button class="mt-2 w-full text-[11px] text-purple-700 hover:text-primary font-semibold flex items-center justify-center gap-1 py-1 rounded-lg hover:bg-purple-50 transition-colors cursor-pointer hotspot-filter-btn" data-location="${(h.locationName || '').replace(/"/g,'&quot;')}">
+                <span class="material-symbols-outlined text-[13px]">filter_list</span>
+                Filter issues to this cluster
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        // Bind cluster filter buttons
+        container.querySelectorAll('.hotspot-filter-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const loc = btn.getAttribute('data-location') || '';
+            const locShort = loc.split('•')[0].trim();
+            if (inputSearch) {
+              inputSearch.value = locShort;
+              inputSearch.dispatchEvent(new Event('input'));
+            }
+            const issuesSection = document.getElementById('issues-container');
+            if (issuesSection) issuesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        });
+      }
+
+      function formatTimeAgo(ts) {
+        if (!ts) return 'Recent';
+        const mins = Math.round((Date.now() - ts) / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.round(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.round(hours / 24)}d ago`;
+      }
+
+      function statusBadge(status) {
+        if (status === 'resolved') {
+          return { label: 'Resolved', cls: 'bg-success-container text-success border-emerald-300 font-bold' };
+        }
+        if (status === 'fixed' || status === 'verification_required') {
+          return { label: 'Fixed (Awaiting Verification)', cls: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold' };
+        }
+        if (status === 'reopened') {
+          return { label: 'Reopened by Student', cls: 'bg-red-100 text-red-900 border-red-300 font-bold' };
+        }
+        if (status === 'in_progress') {
+          return { label: 'In Progress', cls: 'bg-blue-100 text-blue-900 border-blue-300 font-bold' };
+        }
+        return { label: 'Open', cls: 'bg-surface-container text-primary border-outline' };
+      }
+
+      // 4. Render KPI Metrics & Filter Counts
+      function updateMetrics() {
+        const recurringMap = window.computeRecurringMap ? window.computeRecurringMap(tickets) : {};
+
+        const activeCount = tickets.filter(t => t.status !== 'resolved').length;
+        const recurringCount = Object.values(recurringMap).filter(c => c >= 2).length;
+        const pendingCount = tickets.filter(t => t.status === 'fixed' || t.status === 'verification_required').length;
+        const resolvedCount = tickets.filter(t => t.status === 'resolved').length;
+        const unassignedCount = tickets.filter(t => (!t.department || t.department === 'Unassigned') && t.status !== 'resolved').length;
+        const progressCount = tickets.filter(t => t.status === 'in_progress').length;
+
+        // Top KPIs
+        document.getElementById('hdr-active-count').textContent = `${activeCount} Active Issues`;
+        document.getElementById('kpi-active').textContent = activeCount;
+        document.getElementById('kpi-recurring').textContent = recurringCount;
+        document.getElementById('kpi-pending').textContent = pendingCount;
+        document.getElementById('kpi-resolved').textContent = resolvedCount;
+
+        // Filter Tab Counts
+        document.getElementById('tab-count-all').textContent = tickets.length;
+        document.getElementById('tab-count-recurring').textContent = tickets.filter(t => t.status !== 'resolved' && (recurringMap[getNormalizedLoc(t)] || 0) >= 2).length;
+        document.getElementById('tab-count-unassigned').textContent = unassignedCount;
+        document.getElementById('tab-count-progress').textContent = progressCount;
+        document.getElementById('tab-count-pending').textContent = pendingCount;
+        document.getElementById('tab-count-resolved').textContent = resolvedCount;
+      }
+
+      // 5. Render Issues Queue (Fast & Responsive)
+      const container = document.getElementById('issues-container');
+      const inputSearch = document.getElementById('input-search');
+      const selectDept = document.getElementById('select-dept');
+      const selectSort = document.getElementById('select-sort');
+
+      function renderQueue() {
+        updateMetrics();
+        const recurringMap = window.computeRecurringMap ? window.computeRecurringMap(tickets) : {};
+
+        const search = (inputSearch ? inputSearch.value.trim().toLowerCase() : '');
+        const deptFilter = (selectDept ? selectDept.value : '');
+        const sortBy = (selectSort ? selectSort.value : 'priority');
+
+        let rows = tickets.filter(t => {
+          const locKey = getNormalizedLoc(t);
+          const isRec = (recurringMap[locKey] || 0) >= 2;
+          const isFixed = (t.status === 'fixed' || t.status === 'verification_required');
+
+          // Status filter tab
+          if (currentFilter === 'recurring' && (t.status === 'resolved' || !isRec)) return false;
+          if (currentFilter === 'unassigned' && (t.department && t.department !== 'Unassigned')) return false;
+          if (currentFilter === 'in_progress' && t.status !== 'in_progress') return false;
+          if ((currentFilter === 'verification_required' || currentFilter === 'fixed') && !isFixed) return false;
+          if (currentFilter === 'resolved' && t.status !== 'resolved') return false;
+
+          // Department dropdown
+          if (deptFilter && (!t.department || !window.matchesDepartment(t.department, deptFilter))) return false;
+
+          // Search
+          if (search) {
+            const hay = `${t.id} ${t.title} ${t.location} ${t.department} ${t.notes || ''} ${t.studentName || ''}`.toLowerCase();
+            if (!hay.includes(search)) return false;
+          }
+
+          return true;
+        });
+
+        // Compute priority scores and sort
+        rows = rows.map(t => {
+          const locKey = getNormalizedLoc(t);
+          const recCount = recurringMap[locKey] || 0;
+          return { ...t, _priority: calculatePriority(t, recCount), _recCount: recCount };
+        });
+
+        rows.sort((a, b) => {
+          if (sortBy === 'priority') return b._priority.rank - a._priority.rank;
+          if (sortBy === 'recent') return (b.createdAt || 0) - (a.createdAt || 0);
+          if (sortBy === 'reports') return (b.upvotes || 1) - (a.upvotes || 1);
+          return 0;
+        });
+
+        if (rows.length === 0) {
+          container.innerHTML = `
+            <div class="p-10 text-center rounded-xl bg-surface border border-outline text-secondary text-xs">
+              <span class="material-symbols-outlined text-[36px] text-outline-variant mb-2">inbox</span>
+              <p class="font-bold text-primary text-sm">No campus issues found matching your selection.</p>
+              <p class="text-xs text-secondary mt-1">Try switching tabs or resetting the search filter.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = rows.map(t => {
+          const isExpanded = expandedId === t.id;
+          const stat = statusBadge(t.status);
+          const isRecurring = t._recCount >= 2 && t.status !== 'resolved';
+          const isUnassigned = !t.department || t.department === 'Unassigned';
+
+          return `
+            <div class="p-4 sm:p-5 rounded-xl bg-surface border ${isExpanded ? 'border-primary ring-1 ring-primary/20' : 'border-outline'} shadow-xs hover:border-outline-variant transition-all" data-id="${t.id}">
+              
+              <!-- Card Header & Action Row -->
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                
+                <!-- Left: Info -->
+                <div class="flex-1 min-w-0 issue-toggle-trigger cursor-pointer">
+                  <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span class="font-mono text-xs font-bold text-primary">#${t.id}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] border ${stat.cls}">${stat.label}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] border ${t._priority.cls}">AI Priority: ${t.priorityLabel || t._priority.label} (${t.priorityScore || t._priority.rank})</span>
+                    ${(isRecurring || t.isRecurring) ? `
+                      <span class="px-2 py-0.5 rounded-full text-[11px] bg-purple-100 text-purple-900 border border-purple-300 font-bold">
+                        🔁 Recurring (${t._recCount || 2} reports)
+                      </span>
+                    ` : ''}
+                    ${t.duplicateOf ? `
+                      <span class="px-2 py-0.5 rounded-full text-[11px] bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                        🔗 Duplicate of #${t.duplicateOf}
+                      </span>
+                    ` : ''}
+                  </div>
+                  
+                  <h3 class="font-headline font-bold text-base text-primary leading-snug break-words">${t.title}</h3>
+
+                  <div class="text-xs text-secondary mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="flex items-center gap-1 text-on-surface">
+                      <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span>
+                      <strong>${t.location}</strong>
+                    </span>
+                    <span>•</span>
+                    <span>Department: <strong class="${isUnassigned ? 'text-amber-800' : 'text-primary'}">${t.department || 'Needs Department'}</strong></span>
+                    <span>•</span>
+                    <span>${t.upvotes ? t.upvotes + ' reports' : '1 report'}</span>
+                    <span>•</span>
+                    <span class="font-mono text-[11px] text-secondary">${formatTimeAgo(t.createdAt)}</span>
+                  </div>
+                </div>
+
+                <!-- Right: Quick Actions (Assign, Resolve, Details) -->
+                <div class="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                  <button type="button" onclick="event.stopPropagation(); window.openAssignModal('${t.id}', '${(t.department || '').replace(/'/g, "\\'")}')"
+                    class="px-3 py-1.5 rounded-lg bg-primary text-white font-bold hover:bg-primary-container text-xs transition-colors cursor-pointer shadow-xs flex items-center gap-1"
+                    title="${t.department && t.department !== 'Unassigned' ? 'Reassign Department' : 'Assign Department'}">
+                    <span class="material-symbols-outlined text-[15px]">assignment_ind</span>
+                    <span>${t.department && t.department !== 'Unassigned' ? 'Reassign' : 'Assign'}</span>
+                  </button>
+
+                  ${t.status !== 'resolved' ? `
+                    <button type="button" onclick="event.stopPropagation(); window.adminDirectResolve('${t.id}')"
+                      class="px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold hover:bg-emerald-800 text-xs transition-colors cursor-pointer shadow-xs flex items-center gap-1"
+                      title="Mark as Resolved">
+                      <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                      <span>Resolve</span>
+                    </button>
+                  ` : ''}
+
+                  <button type="button" class="issue-toggle-btn px-2.5 py-1.5 rounded-lg border border-outline bg-surface-container hover:bg-surface-container-high text-primary text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    title="${isExpanded ? 'Hide details' : 'View details'}">
+                    <span>${isExpanded ? 'Hide' : 'Details'}</span>
+                    <span class="material-symbols-outlined text-[16px] transition-transform ${isExpanded ? 'rotate-180' : ''}">expand_more</span>
+                  </button>
+                </div>
+
+              </div>
+
+              <!-- Expanded Details Section -->
+              ${isExpanded ? `
+                <div class="mt-3.5 pt-3.5 border-t border-outline space-y-3 text-xs" data-detail="${t.id}">
+                  
+                  <!-- Student Report & Info + Photo Evidence -->
+                  <div class="p-3 rounded-lg bg-surface-container-low border border-outline">
+                    <div class="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
+                      <span class="font-bold text-primary">Student Description</span>
+                      <span class="text-secondary">Reported by: <strong class="text-primary">${escapeHtml(t.studentName || 'Student')}</strong> (${escapeHtml(t.studentId || 'Verified')})</span>
+                    </div>
+                    <p class="text-on-surface-variant leading-relaxed text-xs">${escapeHtml(t.notes || t.description || 'Student complaint submitted via campus intake.')}</p>
+                    ${t.photoUrl ? `
+                      <div class="mt-2.5 space-y-1.5">
+                        <div class="text-[11px] font-bold text-primary uppercase">📷 Photo Evidence</div>
+                        <div class="relative group rounded-lg overflow-hidden border border-outline cursor-pointer w-full max-w-xs" onclick="window.open('${t.photoUrl}','_blank')">
+                          <img src="${t.photoUrl}" alt="Issue Photo Evidence" class="w-full h-32 object-cover rounded-lg" onerror="this.closest('.relative').style.display='none'" loading="lazy" decoding="async" />
+                          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-[28px]">open_in_full</span>
+                          </div>
+                          <div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px]">View Full</div>
+                        </div>
+                      </div>
+                    ` : ''}
+                  </div>
+
+                  <!-- AI Analysis Info -->
+                  ${(t.aiRoutingConfidence || t.isRecurring || t.priorityScore) ? `
+                    <div class="p-3 rounded-lg bg-purple-50 border border-purple-200 space-y-1 text-[11px]">
+                      <div class="font-bold text-purple-800 uppercase">AI Analysis</div>
+                      ${t.priorityScore ? `<div class="text-purple-700">Priority Score: <strong>${t.priorityScore}</strong> — ${t.aiRoutingReasoning || 'Auto-calculated.'}</div>` : ''}
+                      ${t.isRecurring ? `<div class="text-amber-700 font-semibold">⚠️ Recurring issue — ${t.recurrenceCount || 2} previous reports at this location</div>` : ''}
+                      ${t.aiRoutingConfidence ? `<div class="text-purple-600">Routing Confidence: ${Math.round((t.aiRoutingConfidence || 0.85) * 100)}%</div>` : ''}
+                    </div>
+                  ` : ''}
+
+                  <!-- Resolution Progress Timeline (if available) -->
+                  ${t.timeline && t.timeline.length ? `
+                    <div class="p-3 rounded-lg bg-surface-container-low/40 border border-outline space-y-1.5">
+                      <div class="text-[11px] font-bold uppercase text-secondary">Activity History</div>
+                      <div class="space-y-1">
+                        ${t.timeline.map(step => `
+                          <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-primary">• ${escapeHtml(step.stage)}: ${escapeHtml(step.note)}</span>
+                            <span class="text-secondary font-mono">${escapeHtml(step.time)}</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+
+                </div>
+              ` : ''}
+
+            </div>
+          `;
+        }).join('');
+
+        // Expand/Collapse Listener
+        container.querySelectorAll('.issue-toggle-trigger, .issue-toggle-btn').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = el.closest('[data-id]');
+            const id = card ? card.getAttribute('data-id') : null;
+            expandedId = (expandedId === id ? null : id);
+            renderQueue();
+          });
+        });
+      }
+
+      // escapeHtml utility
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // Event Listeners for Filters
+      document.querySelectorAll('.status-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          currentFilter = tab.getAttribute('data-filter');
+          document.querySelectorAll('.status-tab').forEach(b => {
+            b.classList.remove('bg-primary', 'text-white');
+            b.classList.add('bg-surface-container', 'text-secondary');
+          });
+          tab.classList.remove('bg-surface-container', 'text-secondary');
+          tab.classList.add('bg-primary', 'text-white');
+          renderQueue();
+        });
+      });
+
+      if (inputSearch) inputSearch.addEventListener('input', renderQueue);
+      if (selectDept) selectDept.addEventListener('change', renderQueue);
+      if (selectSort) selectSort.addEventListener('change', renderQueue);
+
+      const btnReset = document.getElementById('btn-reset');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => {
+          if (inputSearch) inputSearch.value = '';
+          if (selectDept) selectDept.value = '';
+          if (selectSort) selectSort.value = 'priority';
+          currentFilter = 'all';
+          document.querySelectorAll('.status-tab').forEach(b => {
+            if (b.getAttribute('data-filter') === 'all') {
+              b.classList.add('bg-primary', 'text-white');
+              b.classList.remove('bg-surface-container', 'text-secondary');
+            } else {
+              b.classList.remove('bg-primary', 'text-white');
+              b.classList.add('bg-surface-container', 'text-secondary');
+            }
+          });
+          renderQueue();
+        });
+      }
+
+      // 6. Assign Department Modal
+      window.openAssignModal = function (ticketId, currentDept) {
+        const modal = document.getElementById('modal-assign');
+        const inputId = document.getElementById('assign-ticket-id');
+        const select = document.getElementById('assign-department-select');
+        const sub = document.getElementById('modal-assign-subtitle');
+
+        if (inputId) inputId.value = ticketId;
+        if (sub) sub.textContent = `Assigning Issue #${ticketId}`;
+        if (select && currentDept) select.value = currentDept;
+        if (modal) modal.classList.remove('hidden');
+      };
+
+      window.closeAssignModal = function () {
+        const modal = document.getElementById('modal-assign');
+        if (modal) modal.classList.add('hidden');
+      };
+
+      window.handleAssignSubmit = function (e) {
+        if (e) e.preventDefault();
+        const id = document.getElementById('assign-ticket-id').value;
+        const newDept = document.getElementById('assign-department-select').value;
+        const note = document.getElementById('assign-note').value;
+
+        const idx = tickets.findIndex(t => t.id === id);
+        if (idx !== -1) {
+          tickets[idx].department = newDept;
+          if (tickets[idx].status === 'open') {
+            tickets[idx].status = 'dispatched';
+          }
+          if (!tickets[idx].timeline) tickets[idx].timeline = [];
+          tickets[idx].timeline.push({
+            stage: 'Assigned',
+            time: 'Just now',
+            note: note || `Routed to ${newDept} by Administrator.`
+          });
+
+          if (window.apiAssignDept) {
+            window.apiAssignDept(id, newDept, note).catch(e => console.warn(e));
+          }
+          window.saveTickets(tickets);
+          window.toast(`Issue #${id} assigned to <b>${newDept}</b>`, 'good');
+          window.closeAssignModal();
+          renderQueue();
+        }
+      };
+
+      // 7. Direct Resolution
+      window.adminDirectResolve = function (ticketId) {
+        if (confirm(`Mark Issue #${ticketId} as resolved?`)) {
+          const idx = tickets.findIndex(t => t.id === ticketId);
+          if (idx !== -1) {
+            tickets[idx].status = 'resolved';
+            tickets[idx].progress = 100;
+            tickets[idx].resolvedAt = Date.now();
+            if (!tickets[idx].timeline) tickets[idx].timeline = [];
+            tickets[idx].timeline.push({
+              stage: 'Resolved',
+              time: 'Just now',
+              note: `Resolved and verified by Administrator ${activeAdmin.name}.`
+            });
+            if (window.apiUpdateStatus) {
+              window.apiUpdateStatus(ticketId, 'resolved', `Resolved by Admin ${activeAdmin.name}`).catch(e => console.warn(e));
+            }
+            window.saveTickets(tickets);
+            window.toast(`Issue #${ticketId} marked resolved.`, 'good');
+            renderQueue();
+          }
+        }
+      };
+
+      // 8. Export CSV
+      window.exportIssuesCsv = function () {
+        const header = 'ID,Title,Location,Department,Category,Status,Severity,Reports,Created\n';
+        const body = tickets.map(t => {
+          return `"${t.id}","${(t.title || '').replace(/"/g, '""')}","${(t.location || '').replace(/"/g, '""')}","${t.department || ''}","${t.category || ''}","${t.status || ''}","${t.severity || ''}",${t.upvotes || 1},"${new Date(t.createdAt || Date.now()).toISOString()}"`;
+        }).join('\n');
+
+        const blob = new Blob([header + body], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `campus-issues-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        window.toast('Exported campus issues to CSV', 'good');
+      };
+
+      // 9. Sign Out
+      window.adminLogout = function () {
+        if (confirm("Are you sure you want to sign out of the Admin Room?")) {
+          if (typeof window.logout === 'function') {
+            window.logout("Admin session ended.");
+          } else {
+            localStorage.removeItem('campus_auth_session');
+            window.location.href = 'index.html';
+          }
+        }
+      };
+
+      // 10. View Switcher (Issues List vs Campus Map)
+      const btnViewTable = document.getElementById('btn-view-table');
+      const btnViewMap = document.getElementById('btn-view-map');
+      const issuesContainer = document.getElementById('issues-container');
+      const adminMapSection = document.getElementById('admin-campus-map-section');
+      let adminMapInstance = null;
+
+      function initAdminMap() {
+        if (!adminMapInstance && window.initCampusMap) {
+          adminMapInstance = window.initCampusMap('admin-campus-map-container', {
+            role: 'admin',
+            onRaiseTicket: (loc) => {
+              window.toast(`Selected: ${loc}`, 'info');
+            }
+          });
+        } else if (adminMapInstance) {
+          adminMapInstance.refresh();
+          if (adminMapInstance.map) adminMapInstance.map.invalidateSize();
+        }
+      }
+
+      if (btnViewTable && btnViewMap) {
+        btnViewTable.addEventListener('click', () => {
+          btnViewTable.className = "px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          btnViewMap.className = "px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          if (issuesContainer) issuesContainer.classList.remove('hidden');
+          if (adminMapSection) adminMapSection.classList.add('hidden');
+        });
+
+        btnViewMap.addEventListener('click', () => {
+          btnViewMap.className = "px-3 py-1.5 rounded-md bg-primary text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          btnViewTable.className = "px-3 py-1.5 rounded-md text-secondary hover:text-primary font-semibold flex items-center gap-1.5 transition-colors cursor-pointer";
+          if (issuesContainer) issuesContainer.classList.add('hidden');
+          if (adminMapSection) adminMapSection.classList.remove('hidden');
+          initAdminMap();
+        });
+      }
+
+      // Hotspot toggle button
+      const btnToggleHotspot = document.getElementById('btn-toggle-hotspot');
+      const hotspotPanel = document.getElementById('hotspot-panel');
+      let hotspotVisible = true;
+      if (btnToggleHotspot && hotspotPanel) {
+        btnToggleHotspot.addEventListener('click', () => {
+          hotspotVisible = !hotspotVisible;
+          hotspotPanel.style.display = hotspotVisible ? '' : 'none';
+          const lbl = document.getElementById('hotspot-toggle-label');
+          const ico = document.getElementById('hotspot-toggle-icon');
+          if (lbl) lbl.textContent = hotspotVisible ? 'Hide' : 'Show';
+          if (ico) ico.textContent = hotspotVisible ? 'expand_less' : 'expand_more';
+        });
+      }
+
+      // Live Ticket Update Listener across tabs / roles
+      window.addEventListener('campus:tickets-updated', () => {
+        tickets = window.getTickets ? window.getTickets() : [];
+        renderQueue();
+        renderHotspots();
+      });
+
+      // Cross-device polling every 30 seconds — skips when tab is hidden
+      setInterval(() => {
+        if (document.hidden) return;
+        if (window.syncTicketsWithBackend) {
+          window.syncTicketsWithBackend().then(() => {
+            tickets = window.getTickets ? window.getTickets() : [];
+            renderQueue();
+            renderHotspots();
+          }).catch(() => {});
+        }
+      }, 30000);
+
+      // Initial Render
+      renderQueue();
+      renderHotspots();
+
+    })();
+  </script>
+</body>
+
+</html>

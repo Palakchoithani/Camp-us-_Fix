@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>SOS Desk | CAMP(US)FIX</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#fef9ef",
+            "surface": "#ffffff",
+            "surface-subtle": "#fbf7f0",
+            "surface-muted": "#f4ede3",
+            "primary": "#311419",
+            "primary-hover": "#4a282d",
+            "secondary": "#7a6e70",
+            "border": "#e8e1d7",
+            "border-light": "#f0ebe1",
+            "error": "#ba1a1a",
+            "error-light": "#fee8e6",
+            "success": "#1f6f43",
+            "success-light": "#e8f5ed"
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            headline: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Plus Jakarta Sans"', 'sans-serif'],
+            body: ['"Plus Jakarta Sans"', 'sans-serif'],
+            heading: ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    *, html, body, input, select, textarea, button, p, span, a, h1, h2, h3, h4, h5, h6, label, table, th, td, header nav, header nav * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    body {
+      background-color: #fef9ef;
+      color: #2b1418;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      display: inline-block;
+      white-space: nowrap;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .sos-pulse {
+      animation: pulseRings 2.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+    }
+
+    @keyframes pulseRings {
+      0% {
+        transform: scale(0.98);
+        box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.35);
+      }
+
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 24px rgba(186, 26, 26, 0);
+      }
+
+      100% {
+        transform: scale(0.98);
+        box-shadow: 0 0 0 0 rgba(186, 26, 26, 0);
+      }
+    }
+
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+
+  <!-- ================= MINIMALIST HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+
+      <!-- Brand -->
+      <a href="index.html" class="flex items-center gap-3 group">
+        <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 w-auto object-contain">
+        <span class="font-bold text-base text-primary tracking-tight">SOS Desk</span>
+      </a>
+
+      <!-- Center: Role Navigation -->
+      <nav class="hidden md:flex items-center p-1 rounded-lg bg-surface-muted border border-border text-xs font-mono">
+        <button type="button" onclick="window.switchRoleNav('student')"
+          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Student</button>
+        <button type="button" onclick="window.switchRoleNav('admin')"
+          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Admin</button>
+        <button type="button" onclick="window.switchRoleNav('department')"
+          class="px-3 py-1.5 rounded text-secondary hover:text-primary transition cursor-pointer">Department</button>
+        <span class="px-3 py-1.5 rounded bg-primary text-white font-bold">SOS</span>
+      </nav>
+
+      <!-- Right: Direct Emergency Call Hotline & Exit -->
+      <div class="flex items-center gap-3">
+        <button type="button"
+          onclick="window.openCallModal('Campus Security & Control', '2222', '24/7 Central Emergency Hotline')"
+          class="px-3.5 py-1.5 rounded-full bg-error-light text-error font-bold text-xs flex items-center gap-1.5 hover:bg-error hover:text-white transition cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">call</span>
+          <span>Ext. 2222</span>
+        </button>
+        <a href="index.html" class="text-secondary hover:text-primary p-1 transition" title="Close">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full flex flex-col gap-10">
+
+    <!-- HERO SECTION -->
+    <div class="flex flex-col gap-2 max-w-2xl">
+      <div
+        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-error-light text-error text-[11px] font-bold font-mono w-fit">
+        <span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+        <span>CAMPUS EMERGENCY</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-primary">
+        When it <span class="text-error">can't wait.</span>
+      </h1>
+      <p class="text-secondary text-sm leading-relaxed">
+        Immediate assistance for urgent campus situations. Send a one-tap alert, share your location, and responders
+        dispatch instantly.
+      </p>
+    </div>
+
+    <!-- Minimal Advisory Strip -->
+    <div
+      class="p-3 rounded-xl bg-surface border border-border flex items-center justify-between text-xs text-secondary gap-3">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-600 text-[18px]">info</span>
+        <span>Emergency lines are active 24/7. Use for critical situations only.</span>
+      </div>
+      <span class="text-[11px] font-mono text-primary font-bold hidden sm:inline">Dispatch SLA: &lt; 90s</span>
+    </div>
+
+    <!-- ================= 1. ONE-TAP SOS & RAPID HOTLINES ================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+      <!-- LEFT: Big One-Tap SOS Button (5 cols) -->
+      <div
+        class="lg:col-span-5 bg-surface border border-border rounded-2xl p-6 sm:p-8 flex flex-col justify-between items-center text-center shadow-sm">
+        <div>
+          <div class="text-[11px] font-mono font-bold uppercase text-secondary tracking-wider">One-Tap Alert</div>
+          <h2 class="text-xl font-bold text-primary mt-0.5">Instant SOS Dispatch</h2>
+          <p class="text-secondary text-xs mt-1">Alerts campus security and medical teams immediately.</p>
+        </div>
+
+        <!-- Big Clean SOS Circle -->
+        <div class="py-8 flex flex-col items-center justify-center">
+          <button id="btnBigSos" type="button"
+            class="w-36 h-36 rounded-full bg-error hover:bg-red-700 active:scale-95 text-white font-black text-3xl tracking-widest shadow-xl flex flex-col items-center justify-center cursor-pointer transition-all border-4 border-white sos-pulse">
+            <span>SOS</span>
+            <span class="text-[10px] tracking-normal font-mono font-normal opacity-90 mt-1">Tap to Send</span>
+          </button>
+        </div>
+
+        <!-- Location Status Pill -->
+        <div
+          class="w-full p-2.5 rounded-xl bg-surface-subtle border border-border flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2 text-primary font-mono text-[11px] truncate">
+            <span class="material-symbols-outlined text-error text-[16px] shrink-0">location_on</span>
+            <span id="txtGpsLocationDisplay" class="truncate">Hostel Quad [GPS Ready]</span>
+          </div>
+          <button type="button" id="btnDetectGps"
+            class="text-error font-mono font-bold text-[11px] hover:underline shrink-0 ml-2 cursor-pointer">
+            Detect
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Rapid Emergency Contacts (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-3">
+
+        <!-- Primary Security Hotline Banner -->
+        <div
+          class="p-4 sm:p-5 rounded-2xl bg-surface border border-border flex items-center justify-between gap-4 shadow-sm">
+          <div class="flex items-center gap-3.5 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-error-light text-error flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[22px]">shield</span>
+            </div>
+            <div class="truncate">
+              <div class="font-bold text-primary text-sm sm:text-base">Campus Security &amp; Control</div>
+              <div class="text-xs text-secondary">24/7 Rapid Response Desk</div>
+            </div>
+          </div>
+          <button type="button"
+            onclick="window.openCallModal('Campus Security & Control Room', '2222', '24/7 Central Dispatch Bay')"
+            class="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-mono text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">call</span>
+            <span>Call Now</span>
+          </button>
+        </div>
+
+        <!-- 4 Clean Contact Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+
+          <!-- Medical -->
+          <div class="p-4 rounded-xl bg-surface border border-border flex items-center justify-between gap-3 shadow-sm">
+            <div class="truncate">
+              <div class="font-bold text-xs text-primary">Medical Center</div>
+              <div class="text-[11px] text-secondary">Doctor &amp; Ambulance</div>
+            </div>
+            <button type="button"
+              onclick="window.openCallModal('Campus Medical Center', '2223', 'Emergency Bay & Ambulance on call')"
+              class="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-mono text-xs font-bold transition shrink-0 cursor-pointer">
+              Ext. 2223
+            </button>
+          </div>
+
+          <!-- Warden -->
+          <div class="p-4 rounded-xl bg-surface border border-border flex items-center justify-between gap-3 shadow-sm">
+            <div class="truncate">
+              <div class="font-bold text-xs text-primary">Hostel Warden</div>
+              <div class="text-[11px] text-secondary">Student Safety Response</div>
+            </div>
+            <button type="button"
+              onclick="window.openCallModal('Chief Hostel Warden', '2221', 'Hostel Administration & Night Supervisor')"
+              class="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-mono text-xs font-bold transition shrink-0 cursor-pointer">
+              Ext. 2221
+            </button>
+          </div>
+
+          <!-- Fire -->
+          <div class="p-4 rounded-xl bg-surface border border-border flex items-center justify-between gap-3 shadow-sm">
+            <div class="truncate">
+              <div class="font-bold text-xs text-primary">Fire &amp; Hazards</div>
+              <div class="text-[11px] text-secondary">Emergency Evacuation</div>
+            </div>
+            <button type="button"
+              onclick="window.openCallModal('Fire & Building Hazards Unit', '2225', 'Fire Safety Squad & Egress Control')"
+              class="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-mono text-xs font-bold transition shrink-0 cursor-pointer">
+              Ext. 2225
+            </button>
+          </div>
+
+          <!-- Protected SHE Desk -->
+          <div class="p-4 rounded-xl bg-surface border border-border flex items-center justify-between gap-3 shadow-sm">
+            <div class="truncate">
+              <div class="font-bold text-xs text-primary">Women's Safety</div>
+              <div class="text-[11px] text-secondary">Confidential Protection</div>
+            </div>
+            <button type="button" onclick="window.openSheModal()"
+              class="px-3 py-1.5 rounded-lg bg-error-light hover:bg-error hover:text-white text-error font-mono text-xs font-bold transition shrink-0 cursor-pointer">
+              Report
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= 2. LIVE EMERGENCY STATUS ================= -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-primary">Live Emergency Status</h3>
+        <button id="btnStandDown" type="button" onclick="window.resetEmergencyAlert()"
+          class="hidden text-xs font-mono text-secondary hover:text-error underline cursor-pointer">
+          Reset to Standby
+        </button>
+      </div>
+
+      <div class="bg-surface border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-border pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" id="liveStatusPulse"></span>
+            <span class="font-bold text-xs text-primary" id="liveStatusTitle">All Systems Standby · No Active
+              Emergency</span>
+          </div>
+          <span
+            class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-surface-subtle border border-border text-secondary"
+            id="liveStatusBadge">STANDBY</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 rounded-xl bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary font-mono uppercase">Priority</div>
+            <div class="font-bold text-primary font-mono text-sm mt-0.5" id="liveStatPriority">—</div>
+          </div>
+          <div class="p-3 rounded-xl bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary font-mono uppercase">Category</div>
+            <div class="font-bold text-primary font-mono text-sm mt-0.5" id="liveStatCategory">—</div>
+          </div>
+          <div class="p-3 rounded-xl bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary font-mono uppercase">Responder</div>
+            <div class="font-bold text-primary font-mono text-sm mt-0.5" id="liveStatResponder">—</div>
+          </div>
+          <div class="p-3 rounded-xl bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary font-mono uppercase">ETA</div>
+            <div class="font-bold text-error font-mono text-sm mt-0.5" id="liveStatEta">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 3. QUICK REPORT TILES ================= -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-primary">Quick Report</h3>
+        <span class="text-xs text-secondary">Tap an issue to alert teams</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <button id="btnQuickFire" type="button" onclick="window.triggerQuickReport('Fire / Smoke Hazard', 'fire')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">🔥</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Fire</span>
+        </button>
+        <button id="btnQuickMedical" type="button" onclick="window.triggerQuickReport('Medical Emergency', 'medical')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">🏥</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Medical</span>
+        </button>
+        <button id="btnQuickSecurity" type="button" onclick="window.triggerQuickReport('Security Threat', 'safety')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">🛡️</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Security</span>
+        </button>
+        <button id="btnQuickElectrical" type="button"
+          onclick="window.triggerQuickReport('Electrical Flash / Short Circuit', 'fire')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">⚡</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Electrical</span>
+        </button>
+        <button id="btnQuickSafety" type="button" onclick="window.triggerQuickReport('General Safety Risk', 'safety')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">🔒</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Safety</span>
+        </button>
+        <button id="btnQuickOther" type="button"
+          onclick="window.triggerQuickReport('Critical Other Incident', 'medical')"
+          class="p-4 rounded-xl bg-surface border border-border hover:border-error transition flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm group">
+          <span class="text-2xl">🚨</span>
+          <span class="text-xs font-bold text-primary group-hover:text-error transition">Other</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= 4. CONFIDENTIAL REPORTING ================= -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-primary">Confidential Channels</h3>
+        <span class="text-xs font-mono text-secondary">🔒 Encrypted &amp; Protected</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- SHE Box -->
+        <div class="p-5 rounded-2xl bg-surface border border-border shadow-sm flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-primary text-sm">SHE Complaint Cell</h4>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-error-light text-error">Confidential</span>
+            </div>
+            <p class="text-secondary text-xs mt-1 leading-relaxed">
+              Protected reporting for harassment or personal safety. Reviewed only by designated committee members.
+            </p>
+          </div>
+          <button id="btnOpenShe" type="button" onclick="window.openSheModal()"
+            class="w-full py-2 rounded-xl bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-bold text-xs transition cursor-pointer">
+            File Protected Complaint
+          </button>
+        </div>
+
+        <!-- Anti-Ragging Box -->
+        <div class="p-5 rounded-2xl bg-surface border border-border shadow-sm flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-primary text-sm">Anti-Ragging Desk</h4>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-100 text-red-800">Zero
+                Tolerance</span>
+            </div>
+            <p class="text-secondary text-xs mt-1 leading-relaxed">
+              Strict zero-tolerance channel for bullying or intimidation. Direct escalation to proctorial committee.
+            </p>
+          </div>
+          <button id="btnOpenRagging" type="button" onclick="window.openRaggingModal()"
+            class="w-full py-2 rounded-xl bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-bold text-xs transition cursor-pointer">
+            File Anti-Ragging Report
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= 5. INTELLIGENCE & PROFILE ================= -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- AI Incident Analysis Card -->
+      <div class="p-5 rounded-2xl bg-surface border border-border shadow-sm flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-primary text-sm">AI Incident Analysis</h4>
+            <span class="text-xs font-mono font-bold text-primary" id="aiCardScore">94 / 100</span>
+          </div>
+          <p class="text-secondary text-xs mt-0.5">Live prioritization of active campus signals.</p>
+          <div class="h-1.5 rounded-full bg-surface-muted overflow-hidden mt-3">
+            <div class="h-full bg-primary" id="aiCardBar" style="width: 94%"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+          <div class="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Affected</div>
+            <div class="font-bold text-primary mt-0.5" id="aiCardAffected">8 students</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Urgency</div>
+            <div class="font-bold text-error mt-0.5" id="aiCardUrgency">HIGH</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Safety Risk</div>
+            <div class="font-bold text-primary mt-0.5" id="aiCardSafety">YES</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Routing</div>
+            <div class="font-bold text-primary mt-0.5" id="aiCardRouting">Security</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Profile Form -->
+      <div class="p-5 rounded-2xl bg-surface border border-border shadow-sm flex flex-col justify-between gap-3">
+        <div>
+          <h4 class="font-bold text-primary text-sm">Emergency Profile</h4>
+          <p class="text-secondary text-xs mt-0.5">Pre-saved details automatically attached to your SOS alerts.</p>
+        </div>
+
+        <form id="emergencyProfileForm" class="flex flex-col gap-2.5 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <input id="profHostel" type="text" placeholder="Hostel / Block"
+              class="px-3 py-2 rounded-lg bg-surface-subtle border border-border text-primary outline-none focus:border-primary font-mono text-xs" />
+            <input id="profRoom" type="text" placeholder="Room No."
+              class="px-3 py-2 rounded-lg bg-surface-subtle border border-border text-primary outline-none focus:border-primary font-mono text-xs" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="profContactName" type="text" placeholder="Guardian Name"
+              class="px-3 py-2 rounded-lg bg-surface-subtle border border-border text-primary outline-none focus:border-primary font-mono text-xs" />
+            <input id="profContactPhone" type="tel" placeholder="Phone Number"
+              class="px-3 py-2 rounded-lg bg-surface-subtle border border-border text-primary outline-none focus:border-primary font-mono text-xs" />
+          </div>
+          <button id="btnSaveProfile" type="submit"
+            class="w-full py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs font-mono transition cursor-pointer">
+            Save Profile
+          </button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ================= 6. EMERGENCY RESOURCES MODALS ================= -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <button type="button" onclick="window.openResourceModal('map')"
+        class="p-3.5 rounded-xl bg-surface border border-border hover:border-primary transition flex flex-col gap-1 text-left shadow-sm cursor-pointer">
+        <span class="text-lg">🗺️</span>
+        <span class="font-bold text-primary">Campus Map</span>
+        <span class="text-[10px] text-secondary">Exits &amp; facilities</span>
+      </button>
+      <button type="button" onclick="window.openResourceModal('exits')"
+        class="p-3.5 rounded-xl bg-surface border border-border hover:border-primary transition flex flex-col gap-1 text-left shadow-sm cursor-pointer">
+        <span class="text-lg">🚪</span>
+        <span class="font-bold text-primary">Fire Exits</span>
+        <span class="text-[10px] text-secondary">Assembly locations</span>
+      </button>
+      <button type="button" onclick="window.openResourceModal('medical')"
+        class="p-3.5 rounded-xl bg-surface border border-border hover:border-primary transition flex flex-col gap-1 text-left shadow-sm cursor-pointer">
+        <span class="text-lg">🏥</span>
+        <span class="font-bold text-primary">Medical Points</span>
+        <span class="text-[10px] text-secondary">Ambulance bay</span>
+      </button>
+      <button type="button" onclick="window.openResourceModal('protocol')"
+        class="p-3.5 rounded-xl bg-surface border border-border hover:border-primary transition flex flex-col gap-1 text-left shadow-sm cursor-pointer">
+        <span class="text-lg">📋</span>
+        <span class="font-bold text-primary">Safety Protocol</span>
+        <span class="text-[10px] text-secondary">Response steps</span>
+      </button>
+    </div>
+
+    <!-- ================= 7. LIVE INCIDENT FEED ================= -->
+    <div class="bg-surface border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-primary">Live Incident Feed</h3>
+          <p class="text-[11px] text-secondary font-mono">Click any incident to view details or resolve</p>
+        </div>
+        <button id="simulateBtn" type="button"
+          class="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-muted border border-border text-primary text-xs font-mono font-bold transition cursor-pointer">
+          + Test Incoming Signal
+        </button>
+      </div>
+
+      <!-- Compact Feed List -->
+      <div id="queue" class="flex flex-col divide-y divide-border-light text-xs font-mono">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Stack -->
+  <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-auto font-mono text-xs"
+    id="toastStack"></div>
+
+  <!-- ================= PHONE CALL DIALOG MODAL ================= -->
+  <div id="callModal"
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div
+      class="bg-surface border border-border rounded-2xl max-w-sm w-full p-6 shadow-2xl flex flex-col gap-4 text-center">
+      <div class="w-14 h-14 rounded-full bg-error-light text-error flex items-center justify-center mx-auto">
+        <span class="material-symbols-outlined text-3xl">call</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-base text-primary" id="callModalDept">Campus Security</h3>
+        <p class="text-xs text-secondary mt-1" id="callModalDesc">Staffed 24/7 on-call dispatcher</p>
+        <div
+          class="mt-3 py-2 px-4 rounded-xl bg-surface-subtle border border-border font-mono font-bold text-xl text-primary"
+          id="callModalExt">
+          Ext. 2222
+        </div>
+      </div>
+      <div class="flex items-center justify-center gap-2 text-[11px] text-emerald-700 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+        <span>Line Active · On-Call Dispatcher Standing By</span>
+      </div>
+      <div class="flex flex-col gap-2 pt-2 border-t border-border">
+        <a id="callModalDialBtn" href="tel:2222"
+          class="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">call</span>
+          <span>Dial Directly (tel:)</span>
+        </a>
+        <button id="callModalCopyBtn" type="button"
+          class="w-full py-2 rounded-xl bg-surface-subtle hover:bg-surface-muted border border-border text-primary font-mono text-xs transition cursor-pointer">
+          Copy Extension to Clipboard
+        </button>
+        <button type="button" onclick="window.closeCallModal()"
+          class="w-full py-1.5 text-secondary hover:text-primary text-xs cursor-pointer font-mono">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SHE MODAL ================= -->
+  <div id="sheModal"
+    class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div
+      class="bg-white border border-[#e2e8f0] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl flex flex-col relative text-[#1e293b]">
+      <!-- Close icon button -->
+      <button type="button" onclick="window.closeSheModal()"
+        class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-[#94a3b8] hover:text-[#1e293b] hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+        aria-label="Close">✕</button>
+
+      <!-- Top Shield Icon -->
+      <div class="w-14 h-14 rounded-full bg-[#fee2e2]/70 flex items-center justify-center mx-auto mb-2 shadow-sm">
+        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 5V11.09C4 16.14 7.41 20.85 12 22C16.59 20.85 20 16.14 20 11.09V5L12 2Z" fill="#3B82F6"
+            stroke="#2563EB" stroke-width="1.2" stroke-linejoin="round" />
+          <path d="M12 2V22C16.59 20.85 20 16.14 20 11.09V5L12 2Z" fill="#60A5FA" opacity="0.45" />
+        </svg>
+      </div>
+
+      <!-- Header & Subtitle -->
+      <h3 class="font-bold text-xl sm:text-2xl text-[#1e293b] text-center tracking-tight">SHE Complaint Box</h3>
+      <p class="text-xs text-[#64748b] text-center max-w-sm mx-auto leading-relaxed mt-1 mb-4">
+        Use this protected channel for sensitive student safety concerns. The demo keeps the report outside the normal
+        complaint queue until designated review.
+      </p>
+
+      <!-- Form -->
+      <form id="sheForm" class="flex flex-col gap-3 text-xs sm:text-sm">
+        <!-- Row 1: Report category -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1 sm:gap-2">
+          <label for="sheCategory" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right">
+            Report category
+          </label>
+          <select id="sheCategory" required
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition cursor-pointer">
+            <option value="Harassment / inappropriate behaviour">Harassment / inappropriate behaviour</option>
+            <option value="Bullying / intimidation">Bullying / intimidation</option>
+            <option value="Stalking / safety concern">Stalking / safety concern</option>
+            <option value="Ragging / intimidation">Ragging / intimidation</option>
+            <option value="Other sensitive concern">Other sensitive concern</option>
+          </select>
+        </div>
+
+        <!-- Row 2: Where did it happen? -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1 sm:gap-2">
+          <label for="sheLocation" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right">
+            Where did it happen?
+          </label>
+          <input id="sheLocation" type="text" required placeholder="e.g. Hostel B / Academic E"
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition" />
+        </div>
+
+        <!-- Row 3: Brief description -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-start gap-1 sm:gap-2">
+          <label for="sheDesc" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right pt-2">
+            Brief description
+          </label>
+          <textarea id="sheDesc" rows="3" required placeholder="Describe what happened..."
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition resize-none"></textarea>
+        </div>
+
+        <!-- Hidden input for backwards compatibility with tests -->
+        <input id="sheAnon" type="checkbox" class="hidden" />
+
+        <!-- Reporting preference -->
+        <div class="flex flex-col items-center gap-1.5 pt-1">
+          <span class="text-xs sm:text-sm font-medium text-[#475569]">Reporting preference</span>
+          <div class="inline-flex items-center gap-2" role="group" aria-label="Reporting preference">
+            <button type="button" id="shePrefProtected" onclick="window.setSheReportingPref('protected')"
+              class="px-3.5 py-1.5 rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+              <span>🔒</span> <span>Protected</span>
+            </button>
+            <button type="button" id="shePrefAnonymous" onclick="window.setSheReportingPref('anonymous')"
+              class="px-3.5 py-1.5 rounded-lg border border-transparent bg-slate-100 text-[#64748b] font-medium text-xs sm:text-sm flex items-center gap-1.5 transition hover:bg-slate-200 cursor-pointer">
+              <span class="text-purple-600">👤</span> <span>Anonymous</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="grid grid-cols-2 gap-3 pt-3 mt-1 border-t border-[#f1f5f9]">
+          <button type="button" onclick="window.closeSheModal()"
+            class="w-full py-2.5 px-4 rounded-xl border border-[#cbd5e1] bg-white hover:bg-slate-50 text-[#1e293b] font-bold text-xs sm:text-sm transition cursor-pointer">
+            Cancel
+          </button>
+          <button id="sheSubmitBtn" type="submit"
+            class="w-full py-2.5 px-4 rounded-xl bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold text-xs sm:text-sm shadow-sm transition cursor-pointer">
+            Submit protected complaint
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= ANTI-RAGGING MODAL ================= -->
+  <div id="raggingModal"
+    class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div
+      class="bg-white border border-[#e2e8f0] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl flex flex-col relative text-[#1e293b]">
+      <!-- Close icon button -->
+      <button type="button" onclick="window.closeRaggingModal()"
+        class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-[#94a3b8] hover:text-[#1e293b] hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+        aria-label="Close">✕</button>
+
+      <!-- Top Prohibition Icon -->
+      <div class="w-14 h-14 rounded-full bg-[#fee2e2]/70 flex items-center justify-center mx-auto mb-2 shadow-sm">
+        <svg class="w-7 h-7 text-[#ef4444]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        </svg>
+      </div>
+
+      <!-- Header & Subtitle -->
+      <h3 class="font-bold text-xl sm:text-2xl text-[#1e293b] text-center tracking-tight">Anti-Ragging Box</h3>
+      <p class="text-xs text-[#64748b] text-center max-w-sm mx-auto leading-relaxed mt-1 mb-4">
+        Use this dedicated channel for ragging or intimidation concerns. The demo marks the report as protected and
+        escalation-ready.
+      </p>
+
+      <!-- Form -->
+      <form id="raggingForm" class="flex flex-col gap-3 text-xs sm:text-sm">
+        <!-- Row 1: Report category -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1 sm:gap-2">
+          <label for="raggingCategory" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right">
+            Report category
+          </label>
+          <select id="raggingCategory" required
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition cursor-pointer">
+            <option value="Ragging / intimidation">Ragging / intimidation</option>
+            <option value="Hostel harassment / forced tasks">Hostel harassment / forced tasks</option>
+            <option value="Physical or verbal intimidation">Physical or verbal intimidation</option>
+            <option value="Senior coercion / abuse">Senior coercion / abuse</option>
+            <option value="Other ragging concern">Other ragging concern</option>
+          </select>
+        </div>
+
+        <!-- Row 2: Where did it happen? -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1 sm:gap-2">
+          <label for="raggingLocation" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right">
+            Where did it happen?
+          </label>
+          <input id="raggingLocation" type="text" required placeholder="e.g. Hostel B / Academic E"
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition" />
+        </div>
+
+        <!-- Row 3: Brief description -->
+        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-start gap-1 sm:gap-2">
+          <label for="raggingDesc" class="text-xs sm:text-sm font-medium text-[#334155] sm:text-right pt-2">
+            Brief description
+          </label>
+          <textarea id="raggingDesc" rows="3" required placeholder="Describe what happened..."
+            class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#ef4444] focus:ring-1 focus:ring-[#ef4444] transition resize-none"></textarea>
+        </div>
+
+        <!-- Hidden input for backwards compatibility -->
+        <input id="raggingAnon" type="checkbox" class="hidden" />
+
+        <!-- Reporting preference: Protected Identity Only (No Anonymous Option) -->
+        <div class="flex flex-col items-center gap-1.5 pt-1">
+          <span class="text-xs sm:text-sm font-medium text-[#475569]">Reporting preference</span>
+          <div
+            class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] font-bold text-xs sm:text-sm shadow-sm">
+            <span>🔒</span> <span>Protected</span>
+            <span class="text-[11px] font-normal text-[#64748b] bg-slate-100 px-2 py-0.5 rounded-full ml-1">Identity
+              Kept Protected</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="grid grid-cols-2 gap-3 pt-3 mt-1 border-t border-[#f1f5f9]">
+          <button type="button" onclick="window.closeRaggingModal()"
+            class="w-full py-2.5 px-4 rounded-xl border border-[#cbd5e1] bg-white hover:bg-slate-50 text-[#1e293b] font-bold text-xs sm:text-sm transition cursor-pointer">
+            Cancel
+          </button>
+          <button id="raggingSubmitBtn" type="submit"
+            class="w-full py-2.5 px-4 rounded-xl bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold text-xs sm:text-sm shadow-sm transition cursor-pointer">
+            Submit anti-ragging report
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= EMERGENCY RESOURCES DETAIL MODAL ================= -->
+  <div id="resourceModal"
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <span id="resModalIcon" class="text-2xl">🗺️</span>
+          <h3 id="resModalTitle" class="font-bold text-base text-primary">Emergency Resource</h3>
+        </div>
+        <button type="button" onclick="window.closeResourceModal()"
+          class="text-secondary hover:text-primary text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <div id="resModalContent" class="text-xs text-secondary leading-relaxed space-y-2 font-mono">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-border">
+        <button type="button" onclick="window.closeResourceModal()"
+          class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-mono font-bold cursor-pointer">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= INCIDENT DETAIL MODAL ================= -->
+  <div id="incidentModal"
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-error animate-ping"></span>
+          <h3 id="incModalId" class="font-bold text-base text-primary font-mono">Incident #SOS-911</h3>
+        </div>
+        <button type="button" onclick="window.closeIncidentModal()"
+          class="text-secondary hover:text-primary text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="flex flex-col gap-2.5 text-xs font-mono">
+        <div>
+          <div class="text-[10px] text-secondary uppercase font-bold">Summary</div>
+          <div id="incModalTitle" class="text-primary font-bold text-sm mt-0.5">Title</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Location</div>
+            <div id="incModalLocation" class="text-primary font-bold mt-0.5 truncate">—</div>
+          </div>
+          <div class="p-2 rounded-lg bg-surface-subtle border border-border">
+            <div class="text-[10px] text-secondary">Department</div>
+            <div id="incModalDept" class="text-primary font-bold mt-0.5 truncate">—</div>
+          </div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-surface-subtle border border-border">
+          <div class="text-[10px] text-secondary uppercase">Description</div>
+          <div id="incModalDesc" class="text-primary mt-1 leading-relaxed font-sans text-xs">Description</div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t border-border">
+        <button id="incModalResolveBtn" type="button"
+          class="px-3.5 py-1.5 rounded-lg bg-success hover:bg-emerald-700 text-white font-mono text-xs font-bold transition cursor-pointer">
+          Mark Resolved
+        </button>
+        <button type="button" onclick="window.closeIncidentModal()"
+          class="px-3 py-1.5 rounded-lg text-secondary hover:text-primary text-xs font-mono cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimal Footer -->
+  <footer class="w-full border-t border-border py-6 px-4 text-center text-xs text-secondary font-mono">
+    CAMP(US)FIX SOS Desk · 24/7 Campus Emergency Response
+  </footer>
+
+  <!-- Scripts -->
+  <script src="env.config.js"></script>
+  <script src="auth.js"></script>
+  <script src="campus-ai.js"></script>
+  <script src="dashboards.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      let threads = [];
+      let activeIncident = null;
+      let countdownTimer = null;
+      let countdownSeconds = 90;
+
+      /* ---------- Toast Alerts ---------- */
+      function toast(msg, type = '') {
+        const stack = document.getElementById('toastStack');
+        if (!stack) return;
+        const el = document.createElement('div');
+        el.className = `p-3 rounded-xl border text-xs shadow-md transition-all flex items-center gap-2 ${type === 'warn'
+            ? 'bg-error-light text-error border-error/30'
+            : type === 'good'
+              ? 'bg-success-light text-success border-success/30'
+              : 'bg-surface text-primary border-border'
+          }`;
+        el.innerHTML = `<span>${type === 'warn' ? '🚨' : type === 'good' ? '✓' : 'ℹ️'}</span><span class="flex-1">${msg}</span>`;
+        stack.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 300);
+        }, 3500);
+      }
+
+      /* ---------- Server Sync ---------- */
+      async function syncWithServer() {
+        try {
+          const res = await fetch('/api/tickets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(threads)
+          });
+          const data = await res.json();
+          if (data.success && Array.isArray(data.tickets)) {
+            localStorage.setItem('campus_tickets_store_v2', JSON.stringify(data.tickets));
+          }
+        } catch (e) {
+          localStorage.setItem('campus_tickets_store_v2', JSON.stringify(threads));
+        }
+      }
+
+      async function loadTickets() {
+        try {
+          const res = await fetch('/api/tickets');
+          const serverTickets = await res.json();
+          if (Array.isArray(serverTickets) && serverTickets.length > 0) {
+            threads = serverTickets;
+          }
+        } catch (e) { }
+        renderFeed();
+        updateIntelligence();
+      }
+
+      function updateIntelligence() {
+        const activeTop = threads.find(t => t.status !== 'resolved');
+        if (activeTop) {
+          const scEl = document.getElementById('aiCardScore');
+          const barEl = document.getElementById('aiCardBar');
+          const affEl = document.getElementById('aiCardAffected');
+          const urgEl = document.getElementById('aiCardUrgency');
+          const safeEl = document.getElementById('aiCardSafety');
+          const routEl = document.getElementById('aiCardRouting');
+
+          const score = activeTop.severity === 'critical' || activeTop.id.startsWith('SOS-') ? 96 : 84;
+          if (scEl) scEl.textContent = `${score} / 100`;
+          if (barEl) barEl.style.width = `${score}%`;
+          if (affEl) affEl.textContent = `${activeTop.affected || 1} student(s)`;
+          if (urgEl) urgEl.textContent = score >= 90 ? 'CRITICAL' : 'HIGH';
+          if (safeEl) safeEl.textContent = 'YES';
+          if (routEl) routEl.textContent = (activeTop.department || 'Security').split(' ')[0];
+        }
+      }
+
+      function renderFeed() {
+        const queueEl = document.getElementById('queue');
+        if (!queueEl) return;
+
+        const recent = threads.slice(0, 7);
+        if (recent.length === 0) {
+          queueEl.innerHTML = '<div class="py-4 text-center text-secondary">No recent reports logged.</div>';
+          return;
+        }
+
+        queueEl.innerHTML = recent.map((t, idx) => {
+          const isEscalated = t.status === 'escalated';
+          const isResolved = t.status === 'resolved';
+
+          return `
+            <div class="feed-item py-2.5 flex items-center justify-between gap-3 hover:bg-surface-subtle px-2 rounded-lg cursor-pointer transition" data-idx="${idx}">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-2 h-2 rounded-full shrink-0 ${isEscalated ? 'bg-error animate-pulse' : isResolved ? 'bg-success' : 'bg-amber-500'}"></span>
+                <span class="font-bold text-primary truncate text-xs">${t.title}</span>
+                <span class="text-secondary text-[11px] hidden sm:inline truncate">· ${t.location}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isEscalated ? 'bg-error-light text-error' : isResolved ? 'bg-success-light text-success' : 'bg-surface-muted text-secondary'}">
+                  ${t.status || 'open'}
+                </span>
+                <span class="text-secondary text-xs">›</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        queueEl.querySelectorAll('.feed-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const idx = +item.getAttribute('data-idx');
+            const ticket = recent[idx];
+            if (ticket) window.openIncidentModal(ticket);
+          });
+        });
+      }
+
+      /* ---------- 1-Tap SOS Dispatch ---------- */
+      let currentGps = "Hostel Quad [GPS Ready]";
+      const btnGps = document.getElementById('btnDetectGps');
+      const txtGps = document.getElementById('txtGpsLocationDisplay');
+
+      const GPS_LOCATIONS = [
+        "Hostel Block 4 • 2nd Floor Corridor [12.9716° N, 77.5946° E]",
+        "Central Library • North Wing Concourse [12.9721° N, 77.5950° E]",
+        "Science Quad • Chemistry Lab Complex [12.9712° N, 77.5938° E]",
+        "Girls Hostel 3 • East Quad Lawn [12.9708° N, 77.5942° E]",
+        "Main Dining Hall 2 • North Annex [12.9725° N, 77.5955° E]"
+      ];
+      let gpsIdx = 0;
+
+      if (btnGps) {
+        btnGps.addEventListener('click', () => {
+          gpsIdx = (gpsIdx + 1) % GPS_LOCATIONS.length;
+          currentGps = GPS_LOCATIONS[gpsIdx];
+          if (txtGps) txtGps.textContent = currentGps;
+          toast("📍 Quad GPS location updated & locked.", "good");
+        });
+      }
+
+      function dispatchSos(category = 'Safety', prefix = 'EMERGENCY ALERT', dept = 'Campus Security') {
+        const profile = JSON.parse(localStorage.getItem('campus_emergency_profile') || '{}');
+        const loc = profile.hostel ? `${profile.hostel} ${profile.room ? 'Rm ' + profile.room : ''} (${currentGps})` : currentGps;
+        const newId = "SOS-" + Math.floor(1000 + Math.random() * 9000);
+
+        const ticket = {
+          id: newId,
+          title: `${prefix}: at ${loc.split('(')[0].trim()}`,
+          category: category,
+          department: dept,
+          dept: dept,
+          desc: `Immediate SOS signal dispatched from SOS Desk. Location: ${loc}. Contact info: ${profile.contactName || 'Student'} (${profile.contactPhone || 'N/A'}).`,
+          location: loc,
+          affected: 1,
+          urgencyScore: 0.98,
+          safety: 1,
+          hoursOpen: 0,
+          status: "escalated",
+          confirmed: 0,
+          channel: "Beacon",
+          verified: true,
+          createdAt: Date.now()
+        };
+
+        threads.unshift(ticket);
+        syncWithServer();
+        renderFeed();
+        updateIntelligence();
+
+        // Update Live Status Card
+        const titleEl = document.getElementById('liveStatusTitle');
+        const badgeEl = document.getElementById('liveStatusBadge');
+        const pulseEl = document.getElementById('liveStatusPulse');
+        const prioEl = document.getElementById('liveStatPriority');
+        const catEl = document.getElementById('liveStatCategory');
+        const respEl = document.getElementById('liveStatResponder');
+        const etaEl = document.getElementById('liveStatEta');
+        const standDownBtn = document.getElementById('btnStandDown');
+
+        if (titleEl) titleEl.textContent = `Active Alert #${newId} · Responders Dispatched`;
+        if (badgeEl) { badgeEl.textContent = "DISPATCHED"; badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-error text-white animate-pulse"; }
+        if (pulseEl) pulseEl.className = "w-2 h-2 rounded-full bg-error animate-ping";
+        if (prioEl) prioEl.textContent = "CRITICAL";
+        if (catEl) catEl.textContent = category;
+        if (respEl) respEl.textContent = dept.split(' ')[0] + " Squad";
+        if (standDownBtn) standDownBtn.classList.remove('hidden');
+
+        // Start Live ETA countdown
+        countdownSeconds = 90;
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(() => {
+          if (countdownSeconds > 0) {
+            countdownSeconds--;
+            const mins = Math.floor(countdownSeconds / 60);
+            const secs = countdownSeconds % 60;
+            if (etaEl) etaEl.textContent = `0${mins}:${secs < 10 ? '0' : ''}${secs}`;
+          } else {
+            if (etaEl) etaEl.textContent = "On Site";
+            clearInterval(countdownTimer);
+          }
+        }, 1000);
+
+        toast(`🚨 SOS signal dispatched for #${newId}. Teams notified!`, 'warn');
+
+        // Audio Ping
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        } catch (e) { }
+      }
+
+      window.resetEmergencyAlert = function () {
+        if (confirm("Reset emergency status to Standby?")) {
+          if (countdownTimer) clearInterval(countdownTimer);
+          const titleEl = document.getElementById('liveStatusTitle');
+          const badgeEl = document.getElementById('liveStatusBadge');
+          const pulseEl = document.getElementById('liveStatusPulse');
+          const prioEl = document.getElementById('liveStatPriority');
+          const catEl = document.getElementById('liveStatCategory');
+          const respEl = document.getElementById('liveStatResponder');
+          const etaEl = document.getElementById('liveStatEta');
+          const standDownBtn = document.getElementById('btnStandDown');
+
+          if (titleEl) titleEl.textContent = "All Systems Standby · No Active Emergency";
+          if (badgeEl) { badgeEl.textContent = "STANDBY"; badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-surface-subtle border border-border text-secondary"; }
+          if (pulseEl) pulseEl.className = "w-2 h-2 rounded-full bg-emerald-600 animate-pulse";
+          if (prioEl) prioEl.textContent = "—";
+          if (catEl) catEl.textContent = "—";
+          if (respEl) respEl.textContent = "—";
+          if (etaEl) etaEl.textContent = "—";
+          if (standDownBtn) standDownBtn.classList.add('hidden');
+          toast("Status reset to Standby.", "good");
+        }
+      };
+
+      const btnBigSos = document.getElementById('btnBigSos');
+      if (btnBigSos) {
+        btnBigSos.addEventListener('click', () => {
+          dispatchSos('Safety', 'ONE-TAP SOS ALERT', 'Campus Security');
+        });
+      }
+
+      window.triggerQuickReport = function (name, type) {
+        const catMap = {
+          fire: { cat: 'Electrical', dept: 'Fire & Facility Maintenance' },
+          medical: { cat: 'Safety', dept: 'Health Center Emergency Squad' },
+          safety: { cat: 'Safety', dept: 'Campus Security Flying Squad' }
+        };
+        const conf = catMap[type] || { cat: 'Safety', dept: 'Campus Security' };
+        dispatchSos(conf.cat, `QUICK ALERT: ${name.toUpperCase()}`, conf.dept);
+      };
+
+      /* ---------- Phone Call Modal ---------- */
+      const callModal = document.getElementById('callModal');
+      const callDept = document.getElementById('callModalDept');
+      const callDesc = document.getElementById('callModalDesc');
+      const callExt = document.getElementById('callModalExt');
+      const callDialBtn = document.getElementById('callModalDialBtn');
+      const callCopyBtn = document.getElementById('callModalCopyBtn');
+
+      window.openCallModal = function (dept, ext, desc) {
+        if (callDept) callDept.textContent = dept;
+        if (callDesc) callDesc.textContent = desc;
+        if (callExt) callExt.textContent = `Ext. ${ext}`;
+        if (callDialBtn) callDialBtn.setAttribute('href', `tel:${ext}`);
+        if (callCopyBtn) {
+          callCopyBtn.textContent = `Copy Ext. ${ext}`;
+          callCopyBtn.onclick = () => {
+            navigator.clipboard.writeText(ext).then(() => {
+              callCopyBtn.textContent = `✓ Copied Ext. ${ext}`;
+              toast(`Extension ${ext} copied to clipboard!`, "good");
+            });
+          };
+        }
+        if (callModal) callModal.classList.remove('hidden');
+      };
+
+      window.closeCallModal = function () {
+        if (callModal) callModal.classList.add('hidden');
+      };
+
+      /* ---------- SHE Modal ---------- */
+      const sheModal = document.getElementById('sheModal');
+      let sheReportingPref = 'protected';
+
+      window.openSheModal = () => { if (sheModal) sheModal.classList.remove('hidden'); };
+      window.closeSheModal = () => { if (sheModal) sheModal.classList.add('hidden'); };
+
+      window.setSheReportingPref = (pref) => {
+        sheReportingPref = pref;
+        const btnProt = document.getElementById('shePrefProtected');
+        const btnAnon = document.getElementById('shePrefAnonymous');
+        const submitBtn = document.getElementById('sheSubmitBtn');
+        const anonInput = document.getElementById('sheAnon');
+
+        if (pref === 'protected') {
+          if (btnProt) {
+            btnProt.className = "px-3.5 py-1.5 rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition cursor-pointer";
+          }
+          if (btnAnon) {
+            btnAnon.className = "px-3.5 py-1.5 rounded-lg border border-transparent bg-slate-100 text-[#64748b] font-medium text-xs sm:text-sm flex items-center gap-1.5 transition hover:bg-slate-200 cursor-pointer";
+          }
+          if (submitBtn) {
+            submitBtn.textContent = "Submit protected complaint";
+          }
+          if (anonInput) anonInput.checked = false;
+        } else {
+          if (btnAnon) {
+            btnAnon.className = "px-3.5 py-1.5 rounded-lg border border-[#cbd5e1] bg-white text-[#1e293b] font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition cursor-pointer";
+          }
+          if (btnProt) {
+            btnProt.className = "px-3.5 py-1.5 rounded-lg border border-transparent bg-slate-100 text-[#64748b] font-medium text-xs sm:text-sm flex items-center gap-1.5 transition hover:bg-slate-200 cursor-pointer";
+          }
+          if (submitBtn) {
+            submitBtn.textContent = "Submit anonymous complaint";
+          }
+          if (anonInput) anonInput.checked = true;
+        }
+      };
+
+      const sheForm = document.getElementById('sheForm');
+      if (sheForm) {
+        sheForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const cat = document.getElementById('sheCategory')?.value || "Harassment / inappropriate behaviour";
+          const loc = document.getElementById('sheLocation').value.trim();
+          const desc = document.getElementById('sheDesc').value.trim();
+          const isAnon = (sheReportingPref === 'anonymous');
+
+          const newId = "SHE-" + Math.floor(1000 + Math.random() * 9000);
+          threads.unshift({
+            id: newId,
+            title: `SHE Report: ${cat} at ${loc}`,
+            category: "Safety",
+            reportCategory: cat,
+            department: "SHE Complaint Cell",
+            dept: "SHE Complaint Cell",
+            desc: desc,
+            location: loc,
+            status: "escalated",
+            anonymous: isAnon,
+            preference: sheReportingPref,
+            createdAt: Date.now()
+          });
+          syncWithServer();
+          renderFeed();
+          updateIntelligence();
+          window.closeSheModal();
+          sheForm.reset();
+          window.setSheReportingPref('protected');
+          toast(`✓ ${isAnon ? 'Anonymous' : 'Protected'} complaint submitted to Women's Safety & ICC Cell.`, "good");
+        });
+      }
+
+      /* ---------- Anti-Ragging Modal ---------- */
+      const raggingModal = document.getElementById('raggingModal');
+      window.openRaggingModal = () => { if (raggingModal) raggingModal.classList.remove('hidden'); };
+      window.closeRaggingModal = () => { if (raggingModal) raggingModal.classList.add('hidden'); };
+
+      const raggingForm = document.getElementById('raggingForm');
+      if (raggingForm) {
+        raggingForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const cat = document.getElementById('raggingCategory')?.value || "Ragging / intimidation";
+          const loc = document.getElementById('raggingLocation').value.trim();
+          const desc = document.getElementById('raggingDesc').value.trim();
+
+          const newId = "RAG-" + Math.floor(1000 + Math.random() * 9000);
+          threads.unshift({
+            id: newId,
+            title: `Anti-Ragging Report: [${cat}] at ${loc}`,
+            category: "Safety",
+            reportCategory: cat,
+            department: "Anti-Ragging Committee",
+            dept: "Anti-Ragging Committee",
+            desc: desc,
+            location: loc,
+            status: "escalated",
+            anonymous: false,
+            protectedIdentity: true,
+            preference: "Protected",
+            urgency: "CRITICAL",
+            safetyRisk: true,
+            createdAt: Date.now()
+          });
+          syncWithServer();
+          renderFeed();
+          updateIntelligence();
+          window.closeRaggingModal();
+          raggingForm.reset();
+          toast("🚨 Anti-ragging report logged (Identity Protected). Flying squad dispatched!", "warn");
+        });
+      }
+
+      /* ---------- Resource Detail Modal ---------- */
+      const resModal = document.getElementById('resourceModal');
+      const resIcon = document.getElementById('resModalIcon');
+      const resTitle = document.getElementById('resModalTitle');
+      const resContent = document.getElementById('resModalContent');
+
+      window.openResourceModal = function (type) {
+        if (!resModal) return;
+        if (type === 'map') {
+          resIcon.textContent = "🗺️";
+          resTitle.textContent = "Campus Emergency GIS Map";
+          resContent.innerHTML = `
+            <p><strong>Immediate Egress & Facility Locations:</strong></p>
+            <ul class="list-disc pl-4 space-y-1">
+              <li>Central Security Control: Administrative Block Ground Floor (Ext. 2222)</li>
+              <li>Emergency Bay & Ambulance: East Gate 2 (Ext. 2223)</li>
+              <li>Fire Hydrant Station: Chemistry Quad & Library Annex</li>
+              <li>Assembly Points: Central Quadrangle Lawn & Sports Field</li>
+            </ul>
+            <div class="pt-2">
+              <a href="index.html#mapSection" class="inline-block py-2 px-3 rounded-lg bg-primary text-white text-xs font-bold font-mono">Open Interactive Live Map →</a>
+            </div>
+          `;
+        } else if (type === 'exits') {
+          resIcon.textContent = "🚪";
+          resTitle.textContent = "Fire Exits & Emergency Assembly";
+          resContent.innerHTML = `
+            <p><strong>Evacuation Protocol:</strong></p>
+            <ul class="list-disc pl-4 space-y-1">
+              <li>Follow illuminated green exit signs in all corridors.</li>
+              <li>Do NOT use elevators during fire alarms or electrical faults.</li>
+              <li>Primary Assembly: Central Lawn Quadrangle.</li>
+              <li>Secondary Assembly: Sports Ground Pavilion Field.</li>
+              <li>Report missing students immediately to Warden on Ext. 2221.</li>
+            </ul>
+          `;
+        } else if (type === 'medical') {
+          resIcon.textContent = "🏥";
+          resTitle.textContent = "Medical Points & First Aid";
+          resContent.innerHTML = `
+            <p><strong>Medical Emergency Stations:</strong></p>
+            <ul class="list-disc pl-4 space-y-1">
+              <li>24/7 Campus Clinic: Health Center, Ground Floor Block A.</li>
+              <li>Ambulance Bay: On standby at East Gate 2 (Call Ext. 2223).</li>
+              <li>Automated External Defibrillators (AED): Located at Library Entrance & Gym Reception.</li>
+              <li>Emergency Doctor On Call: 24x7 rotation through campus clinic.</li>
+            </ul>
+          `;
+        } else if (type === 'protocol') {
+          resIcon.textContent = "📋";
+          resTitle.textContent = "Campus Emergency Safety Protocol";
+          resContent.innerHTML = `
+            <p><strong>Standard Safety Steps:</strong></p>
+            <ul class="list-disc pl-4 space-y-1">
+              <li>1. Tap the SOS Button or call Ext. 2222 immediately.</li>
+              <li>2. Share your exact block, floor, or quad landmark.</li>
+              <li>3. Stay calm and keep phone lines open for response squad telemetry.</li>
+              <li>4. Move to illuminated, designated safety zones if under personal threat.</li>
+            </ul>
+          `;
+        }
+        resModal.classList.remove('hidden');
+      };
+
+      window.closeResourceModal = () => { if (resModal) resModal.classList.add('hidden'); };
+
+      /* ---------- Incident Details Modal ---------- */
+      const incModal = document.getElementById('incidentModal');
+      const incId = document.getElementById('incModalId');
+      const incTitle = document.getElementById('incModalTitle');
+      const incLoc = document.getElementById('incModalLocation');
+      const incDept = document.getElementById('incModalDept');
+      const incDesc = document.getElementById('incModalDesc');
+      const incResolveBtn = document.getElementById('incModalResolveBtn');
+
+      window.openIncidentModal = function (ticket) {
+        activeIncident = ticket;
+        if (incId) incId.textContent = `Incident #${ticket.id}`;
+        if (incTitle) incTitle.textContent = ticket.title;
+        if (incLoc) incLoc.textContent = ticket.location || 'Campus Quad';
+        if (incDept) incDept.textContent = ticket.department || 'Security';
+        if (incDesc) incDesc.textContent = ticket.desc || 'No additional notes provided.';
+
+        if (incResolveBtn) {
+          if (ticket.status === 'resolved') {
+            incResolveBtn.textContent = "✓ Resolved";
+            incResolveBtn.disabled = true;
+            incResolveBtn.className = "px-3.5 py-1.5 rounded-lg bg-surface-muted text-secondary font-mono text-xs font-bold cursor-not-allowed";
+          } else {
+            incResolveBtn.textContent = "Mark Resolved";
+            incResolveBtn.disabled = false;
+            incResolveBtn.className = "px-3.5 py-1.5 rounded-lg bg-success hover:bg-emerald-700 text-white font-mono text-xs font-bold transition cursor-pointer";
+            incResolveBtn.onclick = () => {
+              ticket.status = 'resolved';
+              syncWithServer();
+              renderFeed();
+              updateIntelligence();
+              window.closeIncidentModal();
+              toast(`Incident #${ticket.id} marked resolved!`, "good");
+            };
+          }
+        }
+        if (incModal) incModal.classList.remove('hidden');
+      };
+
+      window.closeIncidentModal = () => { if (incModal) incModal.classList.add('hidden'); };
+
+      /* ---------- Profile Form ---------- */
+      const profForm = document.getElementById('emergencyProfileForm');
+      try {
+        const p = JSON.parse(localStorage.getItem('campus_emergency_profile') || '{}');
+        if (p.hostel) document.getElementById('profHostel').value = p.hostel;
+        if (p.room) document.getElementById('profRoom').value = p.room;
+        if (p.contactName) document.getElementById('profContactName').value = p.contactName;
+        if (p.contactPhone) document.getElementById('profContactPhone').value = p.contactPhone;
+      } catch (e) { }
+
+      if (profForm) {
+        profForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const p = {
+            hostel: document.getElementById('profHostel').value.trim(),
+            room: document.getElementById('profRoom').value.trim(),
+            contactName: document.getElementById('profContactName').value.trim(),
+            contactPhone: document.getElementById('profContactPhone').value.trim()
+          };
+          localStorage.setItem('campus_emergency_profile', JSON.stringify(p));
+          toast("✓ Emergency profile saved.", "good");
+        });
+      }
+
+      /* ---------- Test Incoming Signal ---------- */
+      const simBtn = document.getElementById('simulateBtn');
+      if (simBtn) {
+        simBtn.addEventListener('click', () => {
+          const testId = "TEST-" + Math.floor(100 + Math.random() * 900);
+          const sample = {
+            id: testId,
+            title: "Simulated Rapid Distress Beacon",
+            category: "Safety",
+            department: "Campus Security Flying Squad",
+            location: "Academic Block Quadrangle",
+            desc: "Automated test signal received via campus telemetry channel.",
+            status: "escalated",
+            createdAt: Date.now()
+          };
+          threads.unshift(sample);
+          syncWithServer();
+          renderFeed();
+          updateIntelligence();
+          toast(`Test signal #${testId} logged in feed.`, "warn");
+        });
+      }
+
+      loadTickets();
+    })();
+  </script>
+</body>
+
+</html>

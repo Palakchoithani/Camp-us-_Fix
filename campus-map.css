@@ -1,0 +1,162 @@
+/* CAMP(US)FIX — UNIFIED CAMPUS GIS MAP STYLES */
+
+/* Leaflet Container Typography & Background */
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  background: #f4eee2 !important;
+}
+
+/* Institutional Rounded Popup Card */
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #e2dbd0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 30px -8px rgba(49, 20, 25, 0.22), 0 8px 16px -4px rgba(49, 20, 25, 0.1) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+  border: 1px solid #e2dbd0 !important;
+  box-shadow: none !important;
+}
+
+.leaflet-popup-close-button {
+  color: #73575b !important;
+  padding: 8px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #311419 !important;
+}
+
+/* Map Marker Pulse Rings */
+@keyframes pulseRingRed {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.6);
+    opacity: 0.35;
+  }
+
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseRingAmber {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseRingGreen {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.75;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.25;
+  }
+
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseRingCyan {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: scale(1.6);
+    opacity: 0.35;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.pulse-ring-red {
+  animation: pulseRingRed 2s cubic-bezier(0.25, 0, 0.3, 1) infinite;
+}
+
+.pulse-ring-amber {
+  animation: pulseRingAmber 2.3s cubic-bezier(0.25, 0, 0.3, 1) infinite;
+}
+
+.pulse-ring-green {
+  animation: pulseRingGreen 2.8s cubic-bezier(0.25, 0, 0.3, 1) infinite;
+}
+
+.pulse-ring-cyan {
+  animation: pulseRingCyan 2s cubic-bezier(0.25, 0, 0.3, 1) infinite;
+}
+
+/* Custom map scrollbar */
+.custom-map-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-map-scrollbar::-webkit-scrollbar-track {
+  background: #f4eee2;
+}
+
+.custom-map-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4c2c3;
+  border-radius: 4px;
+}
+
+.custom-map-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #5D3136;
+}
+
+/* User Location GPS Beacon & Tooltip */
+.custom-user-beacon {
+  transition: transform 0.25s ease;
+}
+
+.leaflet-tooltip.user-location-tooltip {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 8px !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+  padding: 4px 8px !important;
+}
+
+.leaflet-tooltip.user-location-tooltip::before {
+  border-top-color: #0284c7 !important;
+}

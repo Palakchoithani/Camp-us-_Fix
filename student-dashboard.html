@@ -1,0 +1,2258 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>CAMP(US)FIX — Student Portal &amp; Telemetry Console</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <!-- Leaflet GIS Map Engine & Unified Styles -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="campus-map.css" />
+  <style>
+    @layer base {
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        overscroll-behavior: none;
+      }
+
+      main>:first-child {
+        margin-top: 0 !important;
+      }
+
+      main>:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cursor-pointer {
+      cursor: pointer;
+    }
+
+    .transition-all {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, html, body, input, select, textarea, button, p, span, a, h1, h2, h3, h4, h5, h6, label, table, th, td, header nav, header nav * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+    }
+
+    .font-cinematic {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-fixed-dim": "#edb9bf",
+            "on-primary-container": "#bd8e93",
+            "on-primary-fixed": "#301217",
+            "error": "#ba1a1a",
+            "outline": "#827475",
+            "secondary-fixed-dim": "#e1bec2",
+            "on-primary-fixed-variant": "#623c41",
+            "on-tertiary-fixed-variant": "#643b42",
+            "primary": "#311419",
+            "surface-dim": "#ded9d1",
+            "surface-container-low": "#f8f3ea",
+            "tertiary-fixed": "#ffd9de",
+            "surface": "#fef9ef",
+            "surface-container-lowest": "#ffffff",
+            "on-primary": "#ffffff",
+            "secondary-fixed": "#fedadd",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed-variant": "#594043",
+            "inverse-surface": "#32302a",
+            "surface-container-high": "#ede8df",
+            "on-tertiary-fixed": "#311118",
+            "surface-container-highest": "#e7e2d9",
+            "secondary": "#73575b",
+            "on-tertiary": "#ffffff",
+            "on-surface-variant": "#504445",
+            "outline-variant": "#d4c2c3",
+            "tertiary-container": "#4c272e",
+            "tertiary": "#331219",
+            "tertiary-fixed-dim": "#f1b8c0",
+            "surface-bright": "#fef9ef",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#edb9bf",
+            "background": "#fef9ef",
+            "error-container": "#ffdad6",
+            "on-tertiary-container": "#c08c94",
+            "secondary-container": "#fbd7da",
+            "surface-variant": "#e7e2d9",
+            "on-surface": "#1d1c16",
+            "primary-fixed": "#ffd9dd",
+            "on-background": "#1d1c16",
+            "on-secondary-container": "#775c5f",
+            "inverse-on-surface": "#f5f0e7",
+            "on-error": "#ffffff",
+            "surface-tint": "#7c5359",
+            "primary-container": "#4a282d",
+            "on-secondary-fixed": "#2a1619",
+            "surface-container": "#f2ede4"
+          },
+          borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+          spacing: {
+            "grid-margin-tablet": "1.5rem", "gutter-desktop": "1.5rem", "cell-padding-md": "1rem",
+            "hero-gap": "4rem", "cell-padding-lg": "1.75rem", "grid-margin-mobile": "1rem",
+            "cell-padding-sm": "0.5rem", "gutter-mobile": "0.75rem", "grid-margin-desktop": "2.5rem"
+          },
+          fontFamily: {
+            "cinematic": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body-lg": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline-lg-mobile": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "label-caps": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body-md": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline-lg": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "display-hero": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "meta-technical": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "headline-md": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "display-hero-mobile": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "sans": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "mono": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "body": ['"Plus Jakarta Sans"', 'sans-serif'],
+            "heading": ['"Plus Jakarta Sans"', 'sans-serif']
+          },
+          fontSize: {
+            "body-lg": ["15px", { lineHeight: "24px", fontWeight: "400" }],
+            "headline-lg-mobile": ["26px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "700" }],
+            "body-md": ["13px", { lineHeight: "20px", fontWeight: "400" }],
+            "headline-lg": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "display-hero": ["128px", { lineHeight: "112px", letterSpacing: "-0.04em", fontWeight: "700" }],
+            "meta-technical": ["10px", { lineHeight: "13px", letterSpacing: "0.04em", fontWeight: "400" }],
+            "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
+            "display-hero-mobile": ["48px", { lineHeight: "48px", letterSpacing: "-0.03em", fontWeight: "700" }]
+          }
+        }
+      }
+    };
+  </script>
+  <script src="auth.js"></script>
+  <script>
+    // Immediate Synchronous Head RBAC Guard
+    if (typeof window.enforcePageAccess === 'function') {
+      window.enforcePageAccess('student');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-background font-body-md text-on-surface antialiased selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between">
+
+  <!-- Header Component with Dynamic Student Authentication Session -->
+  <header class="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-surface-dim">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      <!-- Brand & Live Telemetry Indicator -->
+      <div class="flex items-center gap-6">
+        <a href="index.html" class="flex items-center gap-3 cursor-pointer group py-1"
+          title="CAMP(US)FIX — Return to Campus Map">
+          <img src="logo_dark.png" alt="CAMP(US)FIX" class="h-6 sm:h-7 w-auto object-contain transition duration-200">
+          <span
+            class="hidden sm:inline font-meta-technical text-[10px] tracking-widest text-secondary uppercase font-semibold border-l border-surface-dim pl-3 py-0.5">
+            Student Portal
+          </span>
+        </a>
+        <div class="hidden lg:flex items-center gap-2 pl-4 border-l border-surface-dim text-xs text-secondary">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34C759] opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-[#34C759]"></span>
+          </span>
+          <span class="font-semibold text-on-surface font-body-md text-body-md">Campus Active</span>
+          <span class="text-outline">•</span>
+          <span class="font-meta-technical text-meta-technical" id="telemetry-active-signals">38 Signals</span>
+        </div>
+      </div>
+
+      <!-- Role Switcher Navigation Tabs -->
+      <nav
+        class="hidden md:flex items-center p-1 rounded-DEFAULT bg-surface-container border border-surface-dim font-label-caps text-label-caps uppercase tracking-wider font-semibold">
+        <a aria-current="page" class="px-4 py-2 rounded-DEFAULT bg-primary-container text-on-primary shadow-sm"
+          href="student-dashboard.html">
+          Student Portal
+        </a>
+        <button type="button" onclick="window.switchRoleNav('admin')"
+          class="px-3 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Admin Room">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Admin Room</span>
+        </button>
+        <button type="button" onclick="window.switchRoleNav('department')"
+          class="px-3 py-1.5 rounded-DEFAULT text-outline-variant hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          title="Department">
+          <span class="material-symbols-outlined text-[13px]">lock</span>
+          <span>Department</span>
+        </button>
+        <a class="px-4 py-2 rounded-DEFAULT text-secondary hover:text-error transition-colors cursor-pointer flex items-center gap-1.5"
+          href="sos-desk.html" id="link-sos-nav">
+          <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+          SOS Desk
+        </a>
+      </nav>
+
+      <!-- Student Session Clearance Badge (Dynamically Loaded) -->
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex flex-col text-right">
+          <span class="font-label-caps text-xs font-bold text-primary tracking-wide" id="student-header-name">AARAV K.
+            SENAPATI (2024CS0123)</span>
+          <span class="font-meta-technical text-[10px] text-secondary tracking-widest uppercase"
+            id="student-header-hostel">Hostel 4 • Room 212</span>
+        </div>
+        <div
+          class="w-9 h-9 rounded-full bg-surface-container-highest border border-surface-dim flex items-center justify-center text-primary font-bold text-xs shadow-sm cursor-pointer select-none"
+          id="student-avatar-badge" title="Student Profile">
+          AS
+        </div>
+        <button id="btn-header-logout" type="button"
+          class="p-1.5 rounded-DEFAULT text-secondary hover:text-error hover:bg-surface-container transition-colors cursor-pointer flex items-center"
+          title="Secure Logout">
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full bg-background flex-1">
+    <!-- Streamlined Status Banner & Sub-Navigation Tabs (from Reference) -->
+    <div class="border-b border-surface-dim bg-surface-container-low/70 sticky top-20 z-30 backdrop-blur">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-DEFAULT bg-surface text-primary border border-surface-dim text-meta-technical font-label-caps uppercase tracking-wider">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse"></span>
+            Student
+          </span>
+          <span class="text-secondary hidden sm:inline font-meta-technical text-meta-technical"
+            id="student-meta-roll-dept">Roll: 2024CS0123 • CSE</span>
+          <div class="campus-realtime-indicator flex items-center ml-1"></div>
+        </div>
+
+        <!-- Reference Sub-Navigation Tabs: Home, My Tickets, Campus Map, Open Feed -->
+        <nav
+          class="flex items-center gap-1 p-0.5 rounded-DEFAULT bg-surface-container border border-surface-dim font-label-caps text-xs">
+          <button id="nav-subtab-home" type="button"
+            class="px-3.5 py-1 rounded-DEFAULT bg-primary text-on-primary font-bold shadow-sm transition-all cursor-pointer">
+            Home
+          </button>
+          <button id="nav-subtab-tickets" type="button"
+            class="px-3.5 py-1 rounded-DEFAULT text-secondary hover:text-primary font-bold transition-all cursor-pointer">
+            My Tickets
+          </button>
+          <button id="nav-subtab-feed" type="button"
+            class="px-3.5 py-1 rounded-DEFAULT text-secondary hover:text-primary font-bold transition-all cursor-pointer flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px]">public</span>
+            Campus Feed
+          </button>
+          <button id="nav-subtab-map" type="button"
+            class="px-3.5 py-1 rounded-DEFAULT text-secondary hover:text-primary font-bold transition-all cursor-pointer">
+            Campus Map
+          </button>
+        </nav>
+
+        <div class="flex items-center gap-3 text-secondary font-meta-technical text-meta-technical">
+          <span class="hidden md:inline">Standing: <strong class="text-primary font-bold"
+              id="student-civic-standing">Good</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-8 pb-16 space-y-10">
+      <!-- 1. Decluttered 3-Metric Strip (Exact Reference Alignment) -->
+      <section>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Metric 1: Active Tickets -->
+          <div
+            class="p-6 rounded-DEFAULT bg-surface border border-surface-dim shadow-sm flex flex-col justify-between hover:border-outline-variant transition-colors">
+            <div class="flex items-center justify-between text-xs text-secondary">
+              <span class="font-label-caps text-label-caps text-secondary uppercase tracking-wider font-bold">Active
+                Tickets</span>
+              <span class="material-symbols-outlined text-primary text-[18px]">pending_actions</span>
+            </div>
+            <div class="my-4 flex items-baseline gap-2">
+              <span class="font-headline-lg text-4xl font-bold text-primary tracking-tight"
+                id="metric-active-count">02</span>
+              <span class="font-meta-technical text-xs text-secondary uppercase">In Progress</span>
+            </div>
+            <div class="text-meta-technical text-secondary flex items-center gap-1 text-xs truncate"
+              id="metric-active-tracked">
+              <span class="text-primary font-bold">#CP-1055</span>, <span class="text-primary font-bold">#CP-1012</span>
+            </div>
+          </div>
+
+          <!-- Metric 2: Resolved -->
+          <div
+            class="p-6 rounded-DEFAULT bg-surface border border-surface-dim shadow-sm flex flex-col justify-between hover:border-outline-variant transition-colors">
+            <div class="flex items-center justify-between text-xs text-secondary">
+              <span
+                class="font-label-caps text-label-caps text-secondary uppercase tracking-wider font-bold">Resolved</span>
+              <span class="material-symbols-outlined text-secondary text-[18px]">verified</span>
+            </div>
+            <div class="my-4 flex items-baseline gap-2">
+              <span class="font-headline-lg text-4xl font-bold text-primary tracking-tight"
+                id="metric-resolved-count">05</span>
+              <span class="font-meta-technical text-xs text-secondary uppercase">All Time</span>
+            </div>
+            <div
+              class="text-meta-technical text-primary font-bold bg-surface-container self-start px-2 py-0.5 rounded-DEFAULT"
+              id="metric-resolved-audit-rate">
+              100% Confirmed
+            </div>
+          </div>
+
+          <!-- Metric 3: Avg Response -->
+          <div
+            class="p-6 rounded-DEFAULT bg-surface border border-surface-dim shadow-sm flex flex-col justify-between hover:border-outline-variant transition-colors">
+            <div class="flex items-center justify-between text-xs text-secondary">
+              <span class="font-label-caps text-label-caps text-secondary uppercase tracking-wider font-bold">Avg.
+                Response</span>
+              <span class="material-symbols-outlined text-primary text-[18px]">timelapse</span>
+            </div>
+            <div class="my-4 flex items-baseline gap-2">
+              <span class="font-headline-lg text-4xl font-bold text-primary tracking-tight" id="metric-sla-val">3.2<span
+                  class="text-lg font-normal text-secondary">h</span></span>
+              <span class="font-meta-technical text-xs text-secondary uppercase">Campus SLA</span>
+            </div>
+            <div class="text-meta-technical text-secondary flex items-center gap-1 text-xs">
+              <span class="text-[#34C759] font-bold">-24m</span> vs last month
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Report a New Issue Banner -->
+      <section
+        class="p-6 sm:p-7 rounded-DEFAULT bg-primary text-on-primary shadow-sm border border-primary-container flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+        <div class="space-y-1.5 z-10">
+          <h2 class="font-headline-md font-bold text-2xl sm:text-3xl text-white tracking-tight">Report a new issue</h2>
+          <p class="font-body-md text-xs sm:text-sm text-surface-container-high/90 max-w-xl leading-relaxed">
+            Submit campus maintenance or facility issues with photo evidence.
+          </p>
+        </div>
+        <div class="shrink-0 z-10">
+          <button id="btn-banner-file-issue" type="button"
+            class="px-6 py-3.5 rounded-DEFAULT bg-primary-fixed text-on-primary-fixed hover:bg-white font-label-caps text-xs uppercase tracking-wider font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer group">
+            <span class="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform">add</span>
+            <span>+ File an Issue</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. My Active Tickets Section (from Reference) -->
+      <section id="my-tickets-section" class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-surface-dim">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-[22px]">inbox</span>
+            <h2 id="my-tickets-heading" class="font-headline-md font-bold text-xl text-primary tracking-tight">
+              My active tickets
+            </h2>
+            <span id="my-tickets-count-badge"
+              class="px-2 py-0.5 rounded-DEFAULT bg-surface-container text-primary font-meta-technical text-xs font-bold">2</span>
+          </div>
+          <button id="btn-toggle-view-all" type="button"
+            class="font-label-caps text-xs text-primary hover:text-primary-container uppercase font-bold tracking-wider flex items-center gap-1 cursor-pointer transition-colors">
+            <span id="btn-toggle-view-all-text">View all &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Dynamic Ticket Rows Container (Populated via campus_tickets_store_v2) -->
+        <div id="my-tickets-list" class="space-y-3">
+          <!-- Dynamic ticket rows inserted by renderStudentTickets() -->
+        </div>
+      </section>
+
+      <!-- 4. Campus-Wide Open Issues Feed (hidden by default) -->
+      <section id="open-feed-section" class="space-y-4 hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-surface-dim">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-[22px]">public</span>
+            <h2 class="font-headline-md font-bold text-xl text-primary tracking-tight">Campus-Wide Open Issues Feed</h2>
+            <span id="feed-count-badge" class="px-2 py-0.5 rounded-DEFAULT bg-surface-container text-primary font-meta-technical text-xs font-bold">0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="feed-filter-dept" class="bg-surface-container-low text-primary border border-surface-dim rounded-DEFAULT px-2 py-1 text-xs font-meta-technical focus:outline-none focus:border-primary">
+              <option value="">All Departments</option>
+              <option value="Facility Maintenance &amp; Plumbing">Facility &amp; Plumbing</option>
+              <option value="Campus Electrical &amp; Power">Electrical &amp; Power</option>
+              <option value="Hostel Sanitation &amp; Food Services">Hostel &amp; Sanitation</option>
+              <option value="IT &amp; Campus Network Services">IT &amp; Network</option>
+              <option value="SHE Complaint Cell">SHE Cell</option>
+              <option value="Anti-Ragging Committee">Anti-Ragging</option>
+            </select>
+            <input type="search" id="feed-search" placeholder="Search open issues..." class="bg-surface-container-low text-primary border border-surface-dim rounded-DEFAULT pl-3 pr-2 py-1 text-xs focus:outline-none focus:border-primary w-44 font-meta-technical" />
+          </div>
+        </div>
+        <div class="p-3 rounded-DEFAULT bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2">
+          <span class="material-symbols-outlined text-blue-500 text-[16px] mt-0.5 shrink-0">info</span>
+          <span>Browse all open campus issues. If your issue is already reported, <strong>Upvote it</strong> to boost its priority — no need to file a duplicate!</span>
+        </div>
+        <div id="open-feed-list" class="space-y-3">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- 4. Unified Campus Map Section -->
+      <section id="student-campus-map-section" class="space-y-4 pt-6 scroll-mt-24 border-t border-surface-dim hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-surface-dim">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-[22px]">map</span>
+            <h2 class="font-headline-md font-bold text-xl text-primary tracking-tight">
+              Campus Map &amp; Infrastructure Overwatch
+            </h2>
+          </div>
+          <span class="text-xs font-mono text-secondary">Synchronized GIS Telemetry</span>
+        </div>
+        <div id="student-campus-map-container"
+          class="rounded-2xl overflow-hidden border border-surface-dim p-4 sm:p-6 bg-surface shadow-xs">
+          <!-- Rendered by window.initCampusMap -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Guided Incident Intake Modal (Triggered by "+ File an Issue") -->
+  <div id="modal-file-issue"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-surface border border-surface-dim rounded-DEFAULT max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-surface-dim pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#34C759] animate-pulse"></span>
+          <div>
+            <h3 class="font-headline-md font-bold text-base text-primary">Report an Issue</h3>
+            <p class="font-body-md text-xs text-secondary">Submit category, location, and photos</p>
+          </div>
+        </div>
+        <button id="btn-close-intake-modal" type="button" class="text-secondary hover:text-primary cursor-pointer p-1">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Reporting Mode Selector -->
+      <div class="p-3 bg-surface-container-low rounded-DEFAULT border border-surface-dim space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-label-caps text-xs text-primary uppercase font-bold">Reporting Mode</span>
+          <div class="flex items-center gap-1 bg-surface-container p-0.5 rounded-DEFAULT border border-surface-dim">
+            <button id="btnModeStudent" type="button"
+              class="px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase bg-primary text-on-primary font-bold shadow-sm transition-all cursor-pointer">
+              Student
+            </button>
+            <button id="btnModeAnon" type="button"
+              class="px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase text-secondary hover:text-primary font-bold transition-all cursor-pointer">
+              Anonymous
+            </button>
+          </div>
+        </div>
+        <p id="reporting-mode-note" class="font-meta-technical text-[11px] text-secondary">
+          Logged under <strong class="text-primary font-bold" id="intake-roll-display">2024CS0123</strong> (<span
+            id="intake-name-display">Aarav K. Senapati</span>)
+        </p>
+      </div>
+
+      <!-- Step 1: Category Selection -->
+      <div class="space-y-2">
+        <label class="font-label-caps text-xs text-primary uppercase font-bold">1. Category</label>
+
+        <!-- Regular categories (hidden in Anonymous mode) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs" id="category-picker-grid">
+          <button type="button" data-cat="Plumbing"
+            class="category-btn p-2.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex items-center gap-2 border border-primary font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">plumbing</span>
+            <span>Plumbing</span>
+          </button>
+          <button type="button" data-cat="Electrical"
+            class="category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">bolt</span>
+            <span>Electrical</span>
+          </button>
+          <button type="button" data-cat="Wi-Fi &amp; Network"
+            class="category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">wifi</span>
+            <span>Wi-Fi / Net</span>
+          </button>
+          <button type="button" data-cat="Safety Hazard"
+            class="category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">warning</span>
+            <span>Safety Hazard</span>
+          </button>
+          <button type="button" data-cat="Mess &amp; Food"
+            class="category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">restaurant</span>
+            <span>Mess &amp; Food</span>
+          </button>
+          <button type="button" data-cat="AC &amp; Heating"
+            class="category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">ac_unit</span>
+            <span>AC / HVAC</span>
+          </button>
+        </div>
+
+        <!-- Anonymous-only categories: SHE + Anti-Ragging (shown only in Anonymous mode) -->
+        <div class="hidden space-y-2" id="category-anon-grid">
+          <div class="p-2.5 rounded-DEFAULT bg-purple-50 border border-purple-200 text-[11px] text-purple-800 flex items-start gap-2">
+            <span class="material-symbols-outlined text-[15px] text-purple-500 mt-0.5 shrink-0">shield</span>
+            <span>Your identity is <strong>fully masked</strong>. Only SHE Complaint Cell and Anti-Ragging Committee complaints are available in Anonymous mode.</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+
+            <!-- SHE Complaint Cell -->
+            <button type="button" data-cat="SHE Complaint" id="anon-cat-she"
+              class="category-anon-btn p-3.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex flex-col gap-1.5 border border-primary font-bold transition-all cursor-pointer w-full">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">support_agent</span>
+                <span class="font-label-caps text-sm">SHE Complaint Cell</span>
+              </div>
+              <p class="text-[10px] font-normal leading-relaxed opacity-90">
+                Sexual Harassment of Women at Workplace (Prevention, Prohibition &amp; Redressal) Act, 2013.<br>
+                File complaints about harassment, discrimination, or misconduct by staff, faculty, or students.
+              </p>
+              <span class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[12px]">lock</span> Zero-Trace · Confidential
+              </span>
+            </button>
+
+            <!-- Anti-Ragging Committee -->
+            <button type="button" data-cat="Anti-Ragging" id="anon-cat-ar"
+              class="category-anon-btn p-3.5 rounded-DEFAULT bg-surface text-primary text-left flex flex-col gap-1.5 border border-surface-dim hover:border-primary font-bold transition-all cursor-pointer w-full">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">gavel</span>
+                <span class="font-label-caps text-sm">Anti-Ragging Committee</span>
+              </div>
+              <p class="text-[10px] font-normal leading-relaxed text-secondary">
+                UGC Regulations on Curbing the Menace of Ragging in Higher Educational Institutions, 2009.<br>
+                Report ragging, bullying, coercion, or intimidation by seniors, peers, or groups on campus.
+              </p>
+              <span class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-semibold text-primary">
+                <span class="material-symbols-outlined text-[12px]">lock</span> Zero-Trace · Confidential
+              </span>
+            </button>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Issue Title & Details -->
+      <div class="space-y-2">
+        <label class="font-label-caps text-xs text-primary uppercase font-bold">2. Issue Title &amp; Specifics</label>
+        <div>
+          <label class="block font-meta-technical text-[10px] text-secondary uppercase mb-1">Issue Title /
+            Headline</label>
+          <input id="input-issue-title" type="text"
+            placeholder="e.g. Water leak under washbasin or Sparks from main switchboard"
+            class="w-full px-3 py-2 rounded-DEFAULT bg-surface-container-low border border-surface-dim text-primary text-xs focus:border-primary focus:outline-none" />
+        </div>
+        <div>
+          <label class="block font-meta-technical text-[10px] text-secondary uppercase mb-1">Details &amp; Symptoms
+            (Optional)</label>
+          <textarea id="input-issue-description" rows="2"
+            placeholder="Specific symptoms, hazard risk observations, recurrence history..."
+            class="w-full px-3 py-2 rounded-DEFAULT bg-surface-container-low border border-surface-dim text-primary text-xs focus:border-primary focus:outline-none resize-none"></textarea>
+        </div>
+      </div>
+
+      <!-- Real-Time AI Duplicate & Recurrence Insight Banner -->
+      <div id="ai-duplicate-alert"
+        class="hidden p-3 rounded-DEFAULT bg-[#FF9500]/10 border border-[#FF9500]/40 text-[#b56500] space-y-2">
+        <div class="flex items-start gap-2">
+          <span class="material-symbols-outlined text-[18px] text-[#FF9500] mt-0.5">smart_toy</span>
+          <div class="flex-1 text-xs">
+            <span class="font-bold font-label-caps uppercase text-[11px] block">Campus AI: Duplicate / Recurrence
+              Detected</span>
+            <span id="ai-duplicate-text" class="font-body-md text-[11px] text-primary">A similar issue was recently
+              reported at this location.</span>
+          </div>
+        </div>
+        <div id="ai-duplicate-actions" class="flex items-center gap-2 pt-1 border-t border-[#FF9500]/20">
+          <button id="btn-upvote-duplicate" type="button"
+            class="px-2.5 py-1 bg-[#FF9500] text-black font-label-caps text-[11px] font-bold rounded-DEFAULT hover:bg-[#e08500] cursor-pointer">
+            +1 Upvote Existing (#<span id="ai-dup-id">CP-1012</span>)
+          </button>
+          <span class="text-[10px] text-secondary">Increases priority score without creating duplicates</span>
+        </div>
+      </div>
+
+      <!-- Step 3: Location Details -->
+      <div class="space-y-2">
+        <label class="font-label-caps text-xs text-primary uppercase font-bold">3. Location</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-meta-technical text-[10px] text-secondary uppercase mb-1">Building</label>
+            <select id="input-building-wing"
+              class="w-full px-3 py-2 rounded-DEFAULT bg-surface-container-low border border-surface-dim text-primary text-xs focus:border-primary focus:outline-none">
+              <option value="Hostel Block 4">Hostel Block 4</option>
+              <option value="Ramanujan Academic Complex">Ramanujan Academic Complex</option>
+              <option value="Turing Computing Labs">Turing Computing Labs</option>
+              <option value="Central Library">Central Library</option>
+              <option value="Dining Hall 2 (Mess)">Dining Hall 2 (Mess)</option>
+              <option value="Indoor Sports Complex">Indoor Sports Complex</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-meta-technical text-[10px] text-secondary uppercase mb-1">Room / Fixture</label>
+            <input id="input-fixture-room" type="text" placeholder="e.g. Room 212 Fan"
+              class="w-full px-3 py-2 rounded-DEFAULT bg-surface-container-low border border-surface-dim text-primary text-xs focus:border-primary focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Photo Evidence -->
+      <div class="space-y-2">
+        <label class="font-label-caps text-xs text-primary uppercase font-bold">4. Photo (Optional)</label>
+        <div id="evidence-dropzone"
+          class="p-3 border border-dashed border-surface-dim rounded-DEFAULT bg-surface-container-low hover:border-primary transition-colors cursor-pointer text-center space-y-1">
+          <input type="file" id="evidence-photo-file-input" accept="image/*" class="hidden" />
+          <div class="flex items-center justify-center gap-2 text-primary">
+            <span class="material-symbols-outlined text-[18px]" id="evidence-icon">add_a_photo</span>
+            <span class="font-label-caps text-xs font-bold" id="evidence-label-title">Attach Photo</span>
+          </div>
+          <p class="font-meta-technical text-[10px] text-secondary" id="evidence-label-subtitle">JPEG, PNG up to 10MB
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-surface-dim">
+        <button id="btn-cancel-intake-modal" type="button"
+          class="px-4 py-2 rounded-DEFAULT bg-surface-container text-secondary hover:text-primary font-label-caps text-xs uppercase font-bold transition-colors cursor-pointer">
+          Cancel
+        </button>
+        <button id="btn-transmit-incident" type="button"
+          class="px-5 py-2.5 rounded-DEFAULT bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-primary-container transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">send</span>
+          <span id="btn-transmit-text">Submit Issue</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rule 14.B Student Affirmation & Sign-Off Modal (Triggered by "Review →") -->
+  <div id="review-ticket-modal"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-surface border border-surface-dim rounded-DEFAULT max-w-lg w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-surface-dim pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">checklist</span>
+          <h3 class="font-headline-md font-bold text-base text-primary">Verify Resolution</h3>
+        </div>
+        <button id="btn-close-review-modal" type="button" class="text-secondary hover:text-primary cursor-pointer p-1">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- 48-Hour Auto-Close Verification Window Notice -->
+      <div id="modal-review-countdown-bar" class="p-3 rounded-DEFAULT bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-600 text-[18px]">hourglass_top</span>
+          <div>
+            <div class="font-bold text-amber-950 dark:text-amber-200">48-Hour Verification Window</div>
+            <div class="text-[11px] text-amber-900/80 dark:text-amber-300">If unresolved, reopen for technician return. Auto-closes after 48h.</div>
+          </div>
+        </div>
+        <span id="modal-review-countdown-text" class="shrink-0 px-2.5 py-1 rounded bg-amber-200/90 text-amber-950 font-mono font-bold text-[11px]">48h 00m left</span>
+      </div>
+
+      <!-- Ticket Summary -->
+      <div class="p-3.5 bg-surface-container-low rounded-DEFAULT border border-surface-dim space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span id="modal-review-ticket-id"
+            class="px-2 py-0.5 rounded-DEFAULT bg-primary text-on-primary font-label-caps text-xs font-bold">#CP-1012</span>
+          <span id="modal-review-dept" class="font-meta-technical text-xs text-secondary uppercase font-semibold">Campus
+            Electrical &amp; Power</span>
+        </div>
+        <h4 id="modal-review-title" class="font-headline-md font-bold text-base text-primary">Room 212 Fan Regulator
+          Fixed</h4>
+        <p id="modal-review-loc" class="font-body-md text-xs text-secondary">Hostel Block 4 • Room 212</p>
+      </div>
+
+      <!-- Staff Photographic Proof Preview -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-label-caps text-primary uppercase font-bold">Technician Photo Proof</span>
+          <span id="modal-review-prooftime" class="font-meta-technical text-secondary">Uploaded 12:44 PM</span>
+        </div>
+        <div
+          class="w-full h-44 rounded-DEFAULT overflow-hidden bg-surface-container border border-surface-dim relative group">
+          <img id="modal-review-img" alt="Fix Proof Photo" class="w-full h-full object-cover"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmM30j_HlSyROLSSwAPnIPRA_D2m9114be7s9opgdSSdv_Y19tm2jtIyofy0Ye2yQZKEP9Xho786gWzRtGQ93Pbw5LwCcKTv-vpiMWW2tnJOQhVTCXuZJ0yimHtXtWvhrpZfP4Chnctnx-pT_5tInN_VLq4DoeRvItgZ244Ru81U1f6Bs7lxalBZrcfV2LFgmyr64HJ6zrZJDAcVlfjMJwnfnv8-KnE3rm8ySYm8ruAi85qbGxOXli" />
+          <div
+            class="absolute bottom-2 left-2 px-2.5 py-1 rounded-DEFAULT bg-black/70 text-white font-meta-technical text-[10px] backdrop-blur flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[12px] text-[#34C759]">verified</span>
+            <span id="modal-review-techname">Tech: S. Ramanathan (Crew #02)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <p id="modal-review-notes" class="font-body-md text-xs text-on-surface-variant leading-relaxed">
+        Work completed by technician. Please verify and confirm to close this ticket.
+      </p>
+
+      <!-- Star Rating -->
+      <div class="pt-2 border-t border-surface-dim space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-label-caps text-primary uppercase font-bold">Rate Resolution</span>
+          <div class="flex items-center text-primary cursor-pointer select-none" id="modal-star-rating-desk">
+            <span class="material-symbols-outlined text-[18px] modal-star-btn cursor-pointer text-primary"
+              data-star="1">star</span>
+            <span class="material-symbols-outlined text-[18px] modal-star-btn cursor-pointer text-primary"
+              data-star="2">star</span>
+            <span class="material-symbols-outlined text-[18px] modal-star-btn cursor-pointer text-primary"
+              data-star="3">star</span>
+            <span class="material-symbols-outlined text-[18px] modal-star-btn cursor-pointer text-primary"
+              data-star="4">star</span>
+            <span class="material-symbols-outlined text-[18px] modal-star-btn cursor-pointer text-primary"
+              data-star="5">star</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decision Buttons -->
+      <div class="grid grid-cols-2 gap-3 pt-2">
+        <button id="btn-modal-stillbroken" type="button"
+          class="py-2.5 px-3 rounded-DEFAULT bg-surface-container text-error font-label-caps text-xs uppercase font-bold hover:bg-error-container transition-colors flex items-center justify-center gap-1.5 border border-surface-dim cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">flag</span>
+          Still Broken
+        </button>
+        <button id="btn-modal-confirmclose" type="button"
+          class="py-2.5 px-3 rounded-DEFAULT bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-primary-container transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">task_alt</span>
+          Confirm &amp; Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Ticket Tracking & Telemetry Modal (Triggered by "Track →") -->
+  <div id="track-ticket-modal"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-surface border border-surface-dim rounded-DEFAULT max-w-lg w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-surface-dim pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
+          <h3 class="font-headline-md font-bold text-base text-primary" id="modal-track-header">Tracking • #CP-1055</h3>
+        </div>
+        <button id="btn-close-track-modal" type="button" class="text-secondary hover:text-primary cursor-pointer p-1">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Ticket Summary -->
+      <div class="p-3.5 bg-surface-container-low rounded-DEFAULT border border-surface-dim space-y-1">
+        <div class="flex items-center justify-between">
+          <span id="modal-track-id"
+            class="px-2 py-0.5 rounded-DEFAULT bg-primary-container text-on-primary font-label-caps text-xs font-bold">#CP-1055</span>
+          <span id="modal-track-dept"
+            class="font-meta-technical text-xs text-secondary uppercase font-semibold">Facility Maintenance &amp;
+            Plumbing</span>
+        </div>
+        <h4 id="modal-track-title" class="font-headline-md font-bold text-base text-primary">Block 4 Water Cooler Leak
+        </h4>
+        <p id="modal-track-loc" class="font-body-md text-xs text-secondary">Hostel Block 4 • 2nd Floor</p>
+      </div>
+
+      <!-- Countdown & Assigned Tech -->
+      <div class="grid grid-cols-2 gap-3 p-3 bg-surface-container rounded-DEFAULT border border-surface-dim">
+        <div>
+          <span class="font-meta-technical text-[10px] text-secondary uppercase font-semibold">Est. Resolution</span>
+          <div id="modal-track-sla" class="font-headline-md font-bold text-base text-primary mt-0.5">41m Remaining</div>
+        </div>
+        <div class="text-right">
+          <span class="font-meta-technical text-[10px] text-secondary uppercase font-semibold">Assigned Crew</span>
+          <div id="modal-track-crew" class="font-label-caps text-xs font-bold text-primary uppercase mt-0.5">R. Murugan
+            (Crew #04)</div>
+        </div>
+      </div>
+
+      <!-- Progress Stages Stepper -->
+      <div class="space-y-2">
+        <div class="font-label-caps text-xs text-primary uppercase font-bold">Status Stages</div>
+        <div id="modal-track-stepper"
+          class="p-3 bg-surface-container-low rounded-DEFAULT border border-surface-dim space-y-2">
+          <!-- Stepper stages rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Co-signers & Endorsement -->
+      <div class="p-3 rounded-DEFAULT bg-surface border border-surface-dim flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[18px]">group</span>
+          <span id="modal-track-cosign-text" class="font-meta-technical text-xs text-primary font-bold">12
+            Co-signed</span>
+        </div>
+        <button id="btn-modal-cosign" type="button"
+          class="px-3 py-1.5 rounded-DEFAULT bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-primary-container transition-colors shadow-sm flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[14px]">thumb_up</span>
+          <span id="btn-modal-cosign-label">+1 Co-Sign</span>
+        </button>
+      </div>
+
+      <!-- Field Telemetry Timeline -->
+      <div class="space-y-1.5 pt-2 border-t border-surface-dim">
+        <div class="font-label-caps text-xs text-primary uppercase font-bold">Activity Timeline</div>
+        <div id="modal-track-timeline" class="space-y-2 text-xs font-meta-technical max-h-36 overflow-y-auto">
+          <!-- Timeline events rendered by JS -->
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-surface-dim flex justify-end">
+        <button id="btn-dismiss-track-modal" type="button"
+          class="px-4 py-2 bg-surface-container text-primary font-label-caps text-xs uppercase font-bold rounded-DEFAULT cursor-pointer hover:bg-surface-container-high transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit Chain Modal -->
+  <div id="audit-chain-modal"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-surface border border-surface-dim rounded-DEFAULT max-w-lg w-full p-6 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between border-b border-surface-dim pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">verified</span>
+          <h3 class="font-headline-md font-bold text-base text-primary">Audit Log • #CP-1055</h3>
+        </div>
+        <button id="btn-close-audit-modal" class="text-secondary hover:text-primary cursor-pointer">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="space-y-3 text-xs font-meta-technical">
+        <div class="p-3 bg-surface-container-low rounded-DEFAULT space-y-1">
+          <div class="flex justify-between text-secondary">
+            <span class="uppercase font-bold">Submitted</span>
+            <span>Today, 09:14 AM</span>
+          </div>
+          <div class="font-mono text-primary font-semibold text-[11px]">Ref: 8a4ef12...901c43</div>
+          <p class="text-on-surface-variant font-body-md text-[11px]">Issue filed at Hostel Block 4.</p>
+        </div>
+        <div class="p-3 bg-surface-container-low rounded-DEFAULT space-y-1">
+          <div class="flex justify-between text-secondary">
+            <span class="uppercase font-bold">Dispatched</span>
+            <span>Today, 09:28 AM</span>
+          </div>
+          <div class="font-mono text-primary font-semibold text-[11px]">Ref: 3c91db0...f82a19</div>
+          <p class="text-on-surface-variant font-body-md text-[11px]">Assigned to Crew #04 (R. Murugan). SLA target: 4h.
+          </p>
+        </div>
+        <div class="p-3 bg-surface-container-low rounded-DEFAULT space-y-1">
+          <div class="flex justify-between text-secondary">
+            <span class="uppercase font-bold">Verified</span>
+            <span>Today, 10:05 AM</span>
+          </div>
+          <div class="font-mono text-[#34C759] font-semibold text-[11px]">Ref: e5192bb...7102ad</div>
+          <p class="text-on-surface-variant font-body-md text-[11px]">12 Student co-signers verified.</p>
+        </div>
+      </div>
+      <div class="pt-3 border-t border-surface-dim flex justify-end">
+        <button id="btn-confirm-audit-modal"
+          class="px-4 py-2 bg-primary text-on-primary font-label-caps text-xs uppercase font-bold rounded-DEFAULT cursor-pointer hover:bg-primary-container transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
+  </div>
+
+  <!-- Core Authentication & Dashboard Engine Scripts -->
+  <script src="env.config.js"></script>
+  <script src="auth.js"></script>
+  <script src="campus-ai.js"></script>
+  <script src="dashboards.js"></script>
+  <!-- Leaflet GIS Engine & Unified Campus Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="campus-map.js"></script>
+
+  <script>
+    // ==========================================================================
+    // Student Portal Live Controller & State Engine
+    // ==========================================================================
+    (function () {
+      'use strict';
+
+      // 1. Session Guard & Authentication Clearance Check (Strict RBAC)
+      if (typeof window.enforcePageAccess === 'function') {
+        if (!window.enforcePageAccess('student')) return;
+      }
+
+      const session = window.getCurrentSession ? window.getCurrentSession() : null;
+      if (!session || !session.user || session.user.role !== 'student') {
+        if (typeof window.enforcePageAccess === 'function') {
+          window.enforcePageAccess('student');
+        } else {
+          window.location.replace('index.html?auth_required=true');
+        }
+        return;
+      }
+
+      const activeStudent = session.user;
+
+      // Back-Forward Cache (bfcache) & History Navigation Protection
+      window.addEventListener('pageshow', function () {
+        if (typeof window.enforcePageAccess === 'function') {
+          window.enforcePageAccess('student');
+        }
+      });
+      window.addEventListener('popstate', function () {
+        if (typeof window.enforcePageAccess === 'function') {
+          window.enforcePageAccess('student');
+        }
+      });
+
+      // 2. Dynamic Student Profile Population
+      function populateStudentProfile(user) {
+        const headerName = document.getElementById('student-header-name');
+        const headerHostel = document.getElementById('student-header-hostel');
+        const avatarBadge = document.getElementById('student-avatar-badge');
+        const metaRollDept = document.getElementById('student-meta-roll-dept');
+
+        if (headerName) {
+          headerName.textContent = `${user.name.toUpperCase()} (${user.id})`;
+        }
+
+        if (headerHostel) {
+          headerHostel.textContent = user.hostel || 'Hostel 4 • Room 212';
+        }
+
+        if (avatarBadge) {
+          const initials = user.name
+            .split(' ')
+            .filter(Boolean)
+            .map(w => w[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase() || 'AS';
+          avatarBadge.textContent = initials;
+        }
+
+        if (metaRollDept) {
+          const dept = user.department ? (user.department.startsWith('B.Tech') ? user.department : 'B.Tech ' + user.department) : 'B.Tech Computer Science & Engineering';
+          metaRollDept.textContent = `Roll: ${user.id} • ${dept}`;
+        }
+      }
+
+      populateStudentProfile(activeStudent);
+
+      // 3. Toast Alert Notification Helper
+      function showStudentToast(message, type = 'info') {
+        const shelf = document.getElementById('toast-shelf');
+        if (!shelf) return;
+
+        const toast = document.createElement('div');
+        toast.className = `pointer-events-auto p-4 rounded-DEFAULT text-xs font-meta-technical shadow-lg border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center gap-2 max-w-sm ${type === 'success'
+          ? 'bg-surface text-primary border-primary'
+          : type === 'error'
+            ? 'bg-error text-on-error border-error'
+            : 'bg-surface-container-high text-primary border-surface-dim'
+          }`;
+
+        const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+        toast.innerHTML = `
+        <span class="material-symbols-outlined text-[18px] flex-shrink-0">${icon}</span>
+        <span class="flex-1">${message}</span>
+      `;
+
+        shelf.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 4000);
+      }
+
+      // 4. Guided Intake Modal Controller (+ File an Issue)
+      const intakeModal = document.getElementById('modal-file-issue');
+      const btnCloseIntake = document.getElementById('btn-close-intake-modal');
+      const btnCancelIntake = document.getElementById('btn-cancel-intake-modal');
+      const btnBannerFile = document.getElementById('btn-banner-file-issue');
+
+      window.openFileIssueModal = function () {
+        if (intakeModal) {
+          intakeModal.classList.remove('hidden');
+          const fixtureInput = document.getElementById('input-fixture-room');
+          if (fixtureInput) setTimeout(() => fixtureInput.focus(), 150);
+        }
+      };
+      window.scrollToIntake = window.openFileIssueModal;
+
+      if (btnBannerFile) {
+        btnBannerFile.addEventListener('click', window.openFileIssueModal);
+      }
+      if (btnCloseIntake && intakeModal) {
+        btnCloseIntake.addEventListener('click', () => intakeModal.classList.add('hidden'));
+      }
+      if (btnCancelIntake && intakeModal) {
+        btnCancelIntake.addEventListener('click', () => intakeModal.classList.add('hidden'));
+      }
+
+      // 5. Reporting Mode State (Verified Student vs Protected Anon)
+      let isAnonMode = false;
+      const btnModeStudent = document.getElementById('btnModeStudent');
+      const btnModeAnon = document.getElementById('btnModeAnon');
+      const reportingModeNote = document.getElementById('reporting-mode-note');
+      const intakeRollDisplay = document.getElementById('intake-roll-display');
+      const intakeNameDisplay = document.getElementById('intake-name-display');
+
+      if (intakeRollDisplay) intakeRollDisplay.textContent = activeStudent.id;
+      if (intakeNameDisplay) intakeNameDisplay.textContent = activeStudent.name;
+
+      function setReportingMode(anon) {
+        isAnonMode = anon;
+        const regularGrid = document.getElementById('category-picker-grid');
+        const anonGrid = document.getElementById('category-anon-grid');
+
+        if (anon) {
+          if (btnModeAnon) btnModeAnon.className = "px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase bg-primary text-on-primary font-bold shadow-sm transition-all cursor-pointer";
+          if (btnModeStudent) btnModeStudent.className = "px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase text-secondary hover:text-primary font-bold transition-all cursor-pointer";
+          if (reportingModeNote) {
+            reportingModeNote.innerHTML = `<strong class="text-primary font-bold uppercase font-label-caps">Zero-Trace Hash Active:</strong> Roll number and IP signature stripped before ingestion. Identity masked via SHA-256 tokens.`;
+          }
+          // Show only SHE + Anti-Ragging
+          if (regularGrid) regularGrid.classList.add('hidden');
+          if (anonGrid) anonGrid.classList.remove('hidden');
+          // Auto-select SHE by default
+          selectedCategory = 'SHE Complaint';
+          document.querySelectorAll('.category-anon-btn').forEach(b => {
+            if (b.dataset.cat === 'SHE Complaint') {
+              b.className = 'category-anon-btn p-3.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex flex-col gap-1.5 border border-primary font-bold transition-all cursor-pointer w-full';
+            } else {
+              b.className = 'category-anon-btn p-3.5 rounded-DEFAULT bg-surface text-primary text-left flex flex-col gap-1.5 border border-surface-dim hover:border-primary font-bold transition-all cursor-pointer w-full';
+            }
+          });
+          showStudentToast("Protected Anon Zero-Trace Mode Activated.", "info");
+        } else {
+          if (btnModeStudent) btnModeStudent.className = "px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase bg-primary text-on-primary font-bold shadow-sm transition-all cursor-pointer";
+          if (btnModeAnon) btnModeAnon.className = "px-3 py-1 rounded-DEFAULT font-label-caps text-xs uppercase text-secondary hover:text-primary font-bold transition-all cursor-pointer";
+          if (reportingModeNote) {
+            reportingModeNote.innerHTML = `Submission linked to Roll <strong class="text-primary font-bold">${activeStudent.id}</strong> (${activeStudent.name}) for direct department SLA tracking.`;
+          }
+          // Show regular categories
+          if (regularGrid) regularGrid.classList.remove('hidden');
+          if (anonGrid) anonGrid.classList.add('hidden');
+          // Restore default category
+          selectedCategory = 'Plumbing';
+          document.querySelectorAll('.category-btn').forEach(b => {
+            b.className = b.dataset.cat === 'Plumbing'
+              ? 'category-btn p-2.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex items-center gap-2 border border-primary font-bold transition-all cursor-pointer'
+              : 'category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer';
+          });
+          showStudentToast("Verified Student Mode Activated.", "info");
+        }
+      }
+
+      if (btnModeStudent) btnModeStudent.addEventListener('click', () => setReportingMode(false));
+      if (btnModeAnon) btnModeAnon.addEventListener('click', () => setReportingMode(true));
+
+      // 6. Category Selection inside Intake Modal
+      let selectedCategory = "Plumbing";
+      const categoryBtns = document.querySelectorAll('.category-btn');
+      categoryBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          categoryBtns.forEach(b => {
+            b.className = "category-btn p-2.5 rounded-DEFAULT bg-surface text-primary text-left flex items-center gap-2 border border-surface-dim hover:border-outline font-bold transition-all cursor-pointer";
+          });
+          btn.className = "category-btn p-2.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex items-center gap-2 border border-primary font-bold transition-all cursor-pointer";
+          selectedCategory = btn.dataset.cat || "Plumbing";
+        });
+      });
+
+      // Anon category buttons (SHE / Anti-Ragging)
+      const anonCatBtns = document.querySelectorAll('.category-anon-btn');
+      anonCatBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          anonCatBtns.forEach(b => {
+            b.className = "category-anon-btn p-3.5 rounded-DEFAULT bg-surface text-primary text-left flex flex-col gap-1.5 border border-surface-dim hover:border-primary font-bold transition-all cursor-pointer w-full";
+          });
+          btn.className = "category-anon-btn p-3.5 rounded-DEFAULT bg-primary-container text-on-primary text-left flex flex-col gap-1.5 border border-primary font-bold transition-all cursor-pointer w-full";
+          selectedCategory = btn.dataset.cat || "SHE Complaint";
+        });
+      });
+
+      // 7. Evidence Photo Attachment inside Intake Modal — uploads to /api/upload
+      const dropzone = document.getElementById('evidence-dropzone');
+      const photoInput = document.getElementById('evidence-photo-file-input');
+      const evidenceTitle = document.getElementById('evidence-label-title');
+      const evidenceSubtitle = document.getElementById('evidence-label-subtitle');
+      const evidenceIcon = document.getElementById('evidence-icon');
+      let pendingPhotoUrl = null; // Stores uploaded photo URL for ticket creation
+
+      async function uploadPhotoToServer(file) {
+        try {
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+              try {
+                const base64Data = ev.target.result;
+                const resp = await fetch('/api/upload', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ image: base64Data, filename: file.name })
+                });
+                const json = await resp.json();
+                if (json.success && json.url) {
+                  resolve(json.url);
+                } else {
+                  // Fallback: store as data URL in ticket
+                  resolve(base64Data);
+                }
+              } catch (err) {
+                // Fallback: store as data URL
+                resolve(ev.target.result);
+              }
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          });
+        } catch (e) {
+          return null;
+        }
+      }
+
+      if (dropzone && photoInput) {
+        dropzone.addEventListener('click', () => photoInput.click());
+        photoInput.addEventListener('change', async (e) => {
+          if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (evidenceTitle) evidenceTitle.textContent = `Uploading...`;
+            if (evidenceIcon) {
+              evidenceIcon.textContent = 'hourglass_empty';
+              evidenceIcon.classList.remove('text-[#34C759]');
+            }
+            showStudentToast(`Uploading photo: ${file.name}...`, 'info');
+
+            const uploadedUrl = await uploadPhotoToServer(file);
+            pendingPhotoUrl = uploadedUrl;
+
+            if (uploadedUrl) {
+              if (evidenceTitle) evidenceTitle.textContent = `Attached: ${file.name}`;
+              if (evidenceSubtitle) evidenceSubtitle.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB • Uploaded & linked to ticket`;
+              if (evidenceIcon) {
+                evidenceIcon.textContent = 'check_circle';
+                evidenceIcon.classList.add('text-[#34C759]');
+              }
+              showStudentToast(`Photo uploaded and ready to attach!`, 'success');
+            } else {
+              if (evidenceTitle) evidenceTitle.textContent = `Attach Photo`;
+              if (evidenceSubtitle) evidenceSubtitle.textContent = `Upload failed. Please try again.`;
+              if (evidenceIcon) evidenceIcon.textContent = 'error';
+              showStudentToast(`Photo upload failed. Try a smaller file.`, 'error');
+            }
+          }
+        });
+      }
+
+      // 8. Real-Time AI Duplicate / Recurrence Detection & Intake Submission
+      const btnTransmit = document.getElementById('btn-transmit-incident');
+      const btnTransmitText = document.getElementById('btn-transmit-text');
+      const buildingSelect = document.getElementById('input-building-wing');
+      const fixtureInput = document.getElementById('input-fixture-room');
+      const titleInput = document.getElementById('input-issue-title');
+      const descInput = document.getElementById('input-issue-description');
+      const aiDupAlert = document.getElementById('ai-duplicate-alert');
+      const aiDupText = document.getElementById('ai-duplicate-text');
+      const aiDupId = document.getElementById('ai-dup-id');
+      const btnUpvoteDup = document.getElementById('btn-upvote-duplicate');
+
+      let detectedDuplicateId = null;
+      let dupCheckTimeout = null;
+
+      function triggerAiDuplicateCheck() {
+        if (dupCheckTimeout) clearTimeout(dupCheckTimeout);
+        dupCheckTimeout = setTimeout(() => {
+          if (!window.CampusAI) return;
+          const fixture = fixtureInput ? fixtureInput.value.trim() : '';
+          const building = buildingSelect ? buildingSelect.value : '';
+          const title = titleInput ? titleInput.value.trim() : '';
+          const desc = descInput ? descInput.value.trim() : '';
+
+          if (!title && !fixture) {
+            if (aiDupAlert) aiDupAlert.classList.add('hidden');
+            detectedDuplicateId = null;
+            return;
+          }
+
+          const allTickets = window.getTickets ? window.getTickets() : [];
+          const candidate = {
+            title: title || `${selectedCategory}: ${fixture}`,
+            description: desc,
+            category: selectedCategory,
+            location: fixture ? `${building} • ${fixture}` : building
+          };
+
+          const duplicates = window.CampusAI.detectDuplicates(candidate, allTickets);
+          const matchTicket = (duplicates && duplicates.matches && duplicates.matches.length > 0) ? duplicates.matches[0].ticket : (duplicates && duplicates.isDuplicate ? duplicates.matchTicket : null);
+          const matchScore = (duplicates && duplicates.matches && duplicates.matches.length > 0) ? duplicates.matches[0].similarity : (duplicates ? duplicates.similarityScore : 0);
+
+          if (matchTicket) {
+            detectedDuplicateId = matchTicket.id;
+            if (aiDupId) aiDupId.textContent = matchTicket.id;
+            if (aiDupText) {
+              const dupStatus = (matchTicket.status || 'open').replace('_', ' ');
+              aiDupText.innerHTML = `Identified existing ticket <strong>#${matchTicket.id}</strong>: "<em>${matchTicket.title}</em>" (${dupStatus}) at ${matchTicket.location}. (${Math.round(matchScore * 100)}% match)`;
+            }
+            if (aiDupAlert) aiDupAlert.classList.remove('hidden');
+          } else if (duplicates && duplicates.isRecurring && duplicates.matchTicket) {
+            const rec = duplicates.matchTicket;
+            detectedDuplicateId = rec.id;
+            if (aiDupId) aiDupId.textContent = rec.id;
+            if (aiDupText) {
+              aiDupText.innerHTML = `⚠️ <strong>Campus AI:</strong> Recurring defect pattern detected at ${rec.location} (${duplicates.recurrenceCount} prior reports). Priority will be automatically boosted.`;
+            }
+            if (aiDupAlert) aiDupAlert.classList.remove('hidden');
+          } else {
+            detectedDuplicateId = null;
+            if (aiDupAlert) aiDupAlert.classList.add('hidden');
+          }
+        }, 250);
+      }
+
+      if (titleInput) titleInput.addEventListener('input', triggerAiDuplicateCheck);
+      if (descInput) descInput.addEventListener('input', triggerAiDuplicateCheck);
+      if (fixtureInput) fixtureInput.addEventListener('input', triggerAiDuplicateCheck);
+      if (buildingSelect) buildingSelect.addEventListener('change', triggerAiDuplicateCheck);
+
+      if (btnUpvoteDup) {
+        btnUpvoteDup.addEventListener('click', () => {
+          if (!detectedDuplicateId) return;
+          const allTickets = window.getTickets ? window.getTickets() : [];
+          const updated = window.CampusAI ? window.CampusAI.upvoteTicket(detectedDuplicateId, activeStudent.id, allTickets) : null;
+          if (updated && window.saveTickets) {
+            window.saveTickets(allTickets);
+            showStudentToast(`Upvoted #${detectedDuplicateId}! Priority escalated to ${updated.priorityScore} (${updated.priorityLabel}).`, "success");
+            if (intakeModal) intakeModal.classList.add('hidden');
+            renderStudentTickets();
+          }
+        });
+      }
+
+      if (btnTransmit) {
+        btnTransmit.addEventListener('click', () => {
+          const fixture = fixtureInput ? fixtureInput.value.trim() : '';
+          const building = buildingSelect ? buildingSelect.value : 'Hostel Block 4';
+          const title = titleInput ? titleInput.value.trim() : '';
+          const desc = descInput ? descInput.value.trim() : '';
+
+          if (!fixture && !title) {
+            showStudentToast("Please specify the issue title or room / fixture.", "error");
+            if (titleInput) titleInput.focus();
+            return;
+          }
+
+          btnTransmit.disabled = true;
+          if (btnTransmitText) btnTransmitText.textContent = "AI Ingesting & Routing...";
+
+          let selectedLat = intakeModal && intakeModal._pendingLat ? intakeModal._pendingLat : null;
+          let selectedLng = intakeModal && intakeModal._pendingLng ? intakeModal._pendingLng : null;
+
+          setTimeout(() => {
+            const rawId = `CP-${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
+            btnTransmit.disabled = false;
+            if (btnTransmitText) btnTransmitText.textContent = "Submit Issue";
+
+            try {
+              const allTickets = window.getTickets ? window.getTickets() : [];
+              const rawTicket = {
+                id: rawId,
+                title: title || `${selectedCategory}: ${fixture}`,
+                description: desc,
+                category: selectedCategory,
+                location: fixture ? `${building} • ${fixture}` : building,
+                building: building,
+                fixture: fixture,
+                latitude: selectedLat,
+                longitude: selectedLng,
+                studentId: activeStudent.id,
+                studentName: isAnonMode ? 'Anonymous Student' : activeStudent.name,
+                isAnonymous: isAnonMode,
+                photoUrl: pendingPhotoUrl || null,
+                upvotes: 1,
+                upvoters: [activeStudent.id],
+                createdAt: Date.now(),
+                status: 'submitted',
+                timeline: [
+                  { stage: 'Submitted', time: 'Just now', note: `Signal submitted via Student Intake (${isAnonMode ? 'Zero-Trace Anon' : 'Verified Student'}).` }
+                ]
+              };
+
+              // Run Campus AI Analysis: Auto-categorize, Route, Recurrence Check & Priority Score
+              const enriched = window.CampusAI ? window.CampusAI.analyzeTicket(rawTicket, allTickets) : rawTicket;
+              const ticketToStore = (enriched && enriched.id) ? enriched : (enriched.enrichedTicket || rawTicket);
+              allTickets.unshift(ticketToStore);
+
+              // Persist to server backend database & broadcast in real-time
+              if (window.apiCreateTicket) {
+                window.apiCreateTicket(ticketToStore).catch(e => console.warn('apiCreateTicket notice:', e));
+              }
+              if (window.saveTickets) {
+                window.saveTickets(allTickets, false);
+              }
+
+              showStudentToast(`Signal Transmitted! #${rawId} routed to ${enriched.department} [AI Priority: ${enriched.priorityLabel} (${enriched.priorityScore})]`, "success");
+            } catch (err) {
+              console.error("Storage error:", err);
+              showStudentToast("Failed to record ticket. Please retry.", "error");
+            }
+
+            if (titleInput) titleInput.value = "";
+            if (descInput) descInput.value = "";
+            if (fixtureInput) fixtureInput.value = "";
+            if (aiDupAlert) aiDupAlert.classList.add('hidden');
+              // Reset photo state
+              pendingPhotoUrl = null;
+              if (photoInput) photoInput.value = '';
+              if (evidenceTitle) evidenceTitle.textContent = "Attach Photo";
+              if (evidenceSubtitle) evidenceSubtitle.textContent = "JPEG, PNG up to 10MB";
+              if (evidenceIcon) {
+                evidenceIcon.textContent = "add_a_photo";
+                evidenceIcon.classList.remove("text-[#34C759]");
+              }
+
+            if (intakeModal) intakeModal.classList.add('hidden');
+
+            renderStudentTickets();
+          }, 400);
+        });
+      }
+
+      // 9. Sub-Navigation Tabs Handling (Home, My Tickets, Open Feed, Campus Map)
+      const subtabHome = document.getElementById('nav-subtab-home');
+      const subtabTickets = document.getElementById('nav-subtab-tickets');
+      const subtabFeed = document.getElementById('nav-subtab-feed');
+      const subtabMap = document.getElementById('nav-subtab-map');
+
+      const sectionTickets = document.getElementById('my-tickets-section');
+      const sectionFeed = document.getElementById('open-feed-section');
+      const sectionMap = document.getElementById('student-campus-map-section');
+
+      function updateActiveSubtab(activeBtn) {
+        [subtabHome, subtabTickets, subtabFeed, subtabMap].forEach(btn => {
+          if (!btn) return;
+          if (btn === activeBtn) {
+            btn.className = "px-3.5 py-1 rounded-DEFAULT bg-primary text-on-primary font-bold shadow-sm transition-all cursor-pointer";
+          } else {
+            btn.className = "px-3.5 py-1 rounded-DEFAULT text-secondary hover:text-primary font-bold transition-all cursor-pointer";
+          }
+        });
+      }
+
+      function showSection(name) {
+        // Show/hide main content sections
+        const allSections = [sectionTickets, sectionFeed, sectionMap];
+        allSections.forEach(s => { if (s) s.classList.add('hidden'); });
+        if (name === 'tickets' && sectionTickets) sectionTickets.classList.remove('hidden');
+        if (name === 'feed' && sectionFeed) sectionFeed.classList.remove('hidden');
+        if (name === 'map' && sectionMap) sectionMap.classList.remove('hidden');
+        if (name === 'home') {
+          // Home shows tickets section
+          if (sectionTickets) sectionTickets.classList.remove('hidden');
+        }
+      }
+
+      if (subtabHome) {
+        subtabHome.addEventListener('click', () => {
+          updateActiveSubtab(subtabHome);
+          showSection('home');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+      if (subtabTickets) {
+        subtabTickets.addEventListener('click', () => {
+          updateActiveSubtab(subtabTickets);
+          showSection('tickets');
+          if (sectionTickets) sectionTickets.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      if (subtabFeed) {
+        subtabFeed.addEventListener('click', () => {
+          updateActiveSubtab(subtabFeed);
+          showSection('feed');
+          renderOpenFeed();
+          if (sectionFeed) sectionFeed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      function initStudentMap() {
+        if (window.initCampusMap) {
+          window.initCampusMap('student-campus-map-container', {
+            role: 'student',
+            onRaiseTicket: (loc, lat, lng) => {
+              if (intakeModal) {
+                intakeModal.classList.remove('hidden');
+                const fixtureInput = document.getElementById('input-fixture-room');
+                if (fixtureInput) {
+                  fixtureInput.value = loc;
+                  fixtureInput.focus();
+                }
+                // Store lat/lng for ticket creation
+                if (typeof lat === 'number' && typeof lng === 'number') {
+                  intakeModal._pendingLat = lat;
+                  intakeModal._pendingLng = lng;
+                }
+              }
+            }
+          });
+        } else {
+          setTimeout(initStudentMap, 100);
+        }
+      }
+
+      if (subtabMap) {
+        subtabMap.addEventListener('click', () => {
+          updateActiveSubtab(subtabMap);
+          showSection('map');
+          initStudentMap();
+          if (sectionMap) sectionMap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+
+      // Map initializes lazily when user clicks Campus Map tab (section is hidden by default)
+
+      // 10. Dynamic Student Ticket Console & Reference Flow Integration
+      let viewingAllTickets = false;
+      let currentReviewTicket = null;
+      let currentTrackTicket = null;
+      let modalReviewRating = 5;
+
+      // Render Dynamic Student Tickets (Backed by campus_tickets_store_v2)
+      function renderStudentTickets() {
+        const studentId = activeStudent ? activeStudent.id : "2024CS0123";
+        const tickets = window.getStudentTickets ? window.getStudentTickets(studentId) : [];
+        const activeTickets = tickets.filter(t => t.status !== 'resolved');
+        const resolvedTickets = tickets.filter(t => t.status === 'resolved');
+
+        // Update Dynamic Metrics
+        const metricActive = document.getElementById('metric-active-count');
+        const metricTracked = document.getElementById('metric-active-tracked');
+        const metricResolved = document.getElementById('metric-resolved-count');
+        const metricResolvedAudit = document.getElementById('metric-resolved-audit-rate');
+
+        if (metricActive) {
+          metricActive.textContent = String(activeTickets.length).padStart(2, '0');
+        }
+        if (metricTracked) {
+          if (activeTickets.length > 0) {
+            metricTracked.innerHTML = activeTickets.slice(0, 2).map(t => `<span class="text-primary font-bold">#${t.id}</span>`).join(' &amp; ') + ' tracked';
+          } else {
+            metricTracked.innerHTML = '<span class="text-[#34C759] font-bold">0 active defects</span>';
+          }
+        }
+        if (metricResolved) {
+          metricResolved.textContent = String(resolvedTickets.length).padStart(2, '0');
+        }
+        if (metricResolvedAudit) {
+          metricResolvedAudit.textContent = `${resolvedTickets.length > 0 ? '100%' : '0%'} Confirmed`;
+        }
+
+        // Update Section Header & Count Badge
+        const heading = document.getElementById('my-tickets-heading');
+        const badge = document.getElementById('my-tickets-count-badge');
+        const toggleBtnText = document.getElementById('btn-toggle-view-all-text');
+
+        if (viewingAllTickets) {
+          if (heading) heading.textContent = "All tickets";
+          if (badge) badge.textContent = tickets.length;
+          if (toggleBtnText) toggleBtnText.textContent = "Show active only ←";
+        } else {
+          if (heading) heading.textContent = "My active tickets";
+          if (badge) badge.textContent = activeTickets.length;
+          if (toggleBtnText) toggleBtnText.textContent = "View all →";
+        }
+
+        // Render Dynamic Tickets List
+        const listContainer = document.getElementById('my-tickets-list');
+        if (!listContainer) return;
+
+        const displayList = viewingAllTickets ? tickets : activeTickets;
+
+        if (displayList.length === 0) {
+          listContainer.innerHTML = `
+            <div class="p-8 rounded-DEFAULT bg-surface border border-surface-dim text-center space-y-3 shadow-sm">
+              <span class="material-symbols-outlined text-3xl text-secondary">task_alt</span>
+              <div class="font-headline-md font-bold text-base text-primary">No ${viewingAllTickets ? 'Tickets' : 'Active Tickets'}</div>
+              <p class="font-body-md text-xs text-secondary max-w-md mx-auto">All campus issues have been verified and closed.</p>
+              <button onclick="window.openFileIssueModal()" type="button" class="px-4 py-2 bg-primary text-on-primary font-label-caps text-xs uppercase font-bold rounded-DEFAULT hover:bg-primary-container transition-colors cursor-pointer shadow-sm">
+                + File an Issue
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        listContainer.innerHTML = displayList.map(ticket => {
+          const isSignoffNeeded = (ticket.status === 'fixed' || ticket.status === 'verification_required');
+          const isResolved = (ticket.status === 'resolved');
+          const isReopened = (ticket.status === 'reopened');
+
+          let badgeHtml = '';
+          let actionBtnHtml = '';
+
+          let deadlineCountdown = '48h window';
+          let deadlineBadgeCls = 'bg-amber-100 text-amber-900 border-amber-300';
+          if (ticket.verificationDeadline) {
+            const diffMs = ticket.verificationDeadline - Date.now();
+            if (diffMs > 0) {
+              const hours = Math.floor(diffMs / (3600 * 1000));
+              const mins = Math.floor((diffMs % (3600 * 1000)) / (60 * 1000));
+              deadlineCountdown = `${hours}h ${mins}m left`;
+              if (hours < 1) {
+                deadlineBadgeCls = 'bg-red-100 text-red-900 border-red-400 animate-pulse';
+                deadlineCountdown = `${mins}m left (Auto-close imminent)`;
+              } else if (hours < 6) {
+                deadlineBadgeCls = 'bg-amber-200 text-amber-950 border-amber-400 font-bold';
+              }
+            } else {
+              deadlineCountdown = 'Auto-closing...';
+            }
+          }
+
+          if (isSignoffNeeded) {
+            badgeHtml = `
+              <div class="flex flex-col items-end gap-1">
+                <span class="px-2.5 py-1 rounded-DEFAULT ${deadlineBadgeCls} border font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 shadow-xs" title="Department marked repair fixed. Student has 48 hours to confirm or reopen.">
+                  <span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+                  Verify: ${deadlineCountdown}
+                </span>
+                <span class="text-[10px] text-secondary font-mono">Auto-closes at 0h</span>
+              </div>
+            `;
+            actionBtnHtml = `
+              <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <button onclick="window.quickConfirmResolution('${ticket.id}')" type="button"
+                  class="px-3 py-1.5 rounded-DEFAULT bg-[#34C759] hover:bg-[#2cb04e] text-black font-label-caps text-xs uppercase font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer" title="Verify Resolution: Mark Issue Resolved & Close Ticket">
+                  <span class="material-symbols-outlined text-[14px]">task_alt</span>
+                  <span>Issue Resolved</span>
+                </button>
+                <button onclick="window.quickStillBroken('${ticket.id}')" type="button"
+                  class="px-2.5 py-1.5 rounded-DEFAULT bg-surface-container text-error border border-error/40 hover:bg-error hover:text-white font-label-caps text-xs uppercase font-bold transition-all flex items-center gap-1 cursor-pointer" title="Issue Not Resolved: Reopen ticket and return to department">
+                  <span class="material-symbols-outlined text-[14px]">restart_alt</span>
+                  <span>Not Resolved / Reopen</span>
+                </button>
+                <button onclick="window.openReviewModal('${ticket.id}')" type="button"
+                  class="px-3 py-1.5 rounded-DEFAULT bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-primary-container transition-all flex items-center gap-1 shadow-sm cursor-pointer" title="Review Photo Proof & Affirmation">
+                  <span>Proof & Review →</span>
+                </button>
+              </div>
+            `;
+          } else if (isResolved) {
+            const isAutoClosed = (ticket.closureType === 'auto_closed');
+            badgeHtml = isAutoClosed ? `
+              <span class="px-3 py-1 rounded-DEFAULT bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 border border-slate-300 dark:border-slate-700" title="Ticket auto-closed after 48-hour student verification window expired without manual sign-off">
+                <span class="material-symbols-outlined text-[15px]">schedule</span>
+                Auto-Closed (48h)
+              </span>
+            ` : `
+              <span class="px-3 py-1 rounded-DEFAULT bg-[#34C759]/15 text-[#248a3d] font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 border border-[#34C759]/30" title="Officially verified and signed off by student">
+                <span class="material-symbols-outlined text-[15px]">verified</span>
+                Resolved (Student Verified)
+              </span>
+            `;
+            actionBtnHtml = `
+              <button onclick="window.openAuditModalFor('${ticket.id}')" type="button"
+                class="px-4 py-2 rounded-DEFAULT bg-surface-container text-secondary hover:text-primary font-label-caps text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1 border border-surface-dim cursor-pointer">
+                <span>Audit</span>
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </button>
+            `;
+          } else if (isReopened) {
+            badgeHtml = `
+              <span class="px-3 py-1 rounded-DEFAULT bg-red-100 text-red-800 border border-red-300 font-label-caps text-xs uppercase font-bold flex items-center gap-1.5" title="Reopened by student. Returned to department queue.">
+                <span class="material-symbols-outlined text-[15px]">restart_alt</span>
+                Reopened (Dept Alerted)
+              </span>
+            `;
+            actionBtnHtml = `
+              <button onclick="window.openTrackModal('${ticket.id}')" type="button"
+                class="px-4 py-2 rounded-DEFAULT bg-surface-container-high text-primary border border-surface-dim hover:border-primary font-label-caps text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1 cursor-pointer">
+                <span>Track</span>
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </button>
+            `;
+          } else {
+            const statusLabel = (ticket.status || 'in_progress').replace('_', ' ');
+            badgeHtml = `
+              <span class="px-3 py-1 rounded-DEFAULT bg-surface-container text-primary font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 border border-surface-dim">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-ping"></span>
+                ${statusLabel}
+              </span>
+            `;
+            actionBtnHtml = `
+              <button onclick="window.openTrackModal('${ticket.id}')" type="button"
+                class="px-4 py-2 rounded-DEFAULT bg-surface-container-high text-primary border border-surface-dim hover:border-primary font-label-caps text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1 cursor-pointer">
+                <span>Track</span>
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </button>
+            `;
+          }
+
+          // Priority badge styling
+          const pScore = ticket.priorityScore || 50;
+          const pLabel = ticket.priorityLabel || (pScore >= 80 ? 'CRITICAL' : pScore >= 65 ? 'HIGH' : pScore >= 40 ? 'MEDIUM' : 'LOW');
+          let priorityClass = 'bg-[#34C759]/15 text-[#248a3d] border-[#34C759]/30';
+          if (pLabel === 'CRITICAL') priorityClass = 'bg-[#FF3B30]/15 text-[#FF3B30] border-[#FF3B30]/30';
+          else if (pLabel === 'HIGH') priorityClass = 'bg-[#FF9500]/15 text-[#b56500] border-[#FF9500]/30';
+          else if (pLabel === 'MEDIUM') priorityClass = 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/30';
+
+          const recurringBadge = ticket.isRecurring ? `
+            <span class="px-2 py-0.5 rounded-DEFAULT bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-label-caps text-[10px] font-bold flex items-center gap-1" title="Campus AI identified recurring defect pattern at this location">
+              <span class="material-symbols-outlined text-[12px]">repeat</span>
+              Recurring
+            </span>
+          ` : '';
+
+          const deptShort = ticket.department ? ticket.department.replace('Facility Maintenance & ', '').replace('Campus ', '').replace('Services', '').trim() : 'Maintenance';
+          let subtitleText = '';
+          if (isSignoffNeeded) {
+            subtitleText = `${deptShort} &bull; Fix completed &bull; ${deadlineCountdown} &bull; Crew: ${ticket.assignedCrew || 'Field Specialist'}`;
+          } else if (isResolved) {
+            const isAutoClosed = (ticket.closureType === 'auto_closed');
+            subtitleText = `${deptShort} &bull; ${isAutoClosed ? 'Auto-closed after 48h timeout' : 'Closed & verified with audit record'}`;
+          } else if (isReopened) {
+            subtitleText = `${deptShort} &bull; Reopened by reporter &bull; Urgent reinspection active`;
+          } else {
+            subtitleText = `${deptShort} &bull; ${ticket.assignedCrew ? 'Crew ' + ticket.assignedCrew : 'Auto-routed by AI'} &bull; ${ticket.slaRemaining || 'Active SLA'}`;
+          }
+
+          return `
+            <div class="p-4 sm:p-5 rounded-DEFAULT bg-surface border border-surface-dim hover:border-outline shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all" id="ticket-card-${ticket.id}">
+              <div class="flex items-start gap-3.5 sm:gap-4 flex-1">
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <span class="px-2.5 py-1 rounded-DEFAULT bg-surface-container-low text-primary border border-surface-dim font-label-caps text-xs font-bold mt-0.5">
+                    #${ticket.id}
+                  </span>
+                  <button onclick="window.upvoteTicketFromCard('${ticket.id}')" type="button" class="px-2 py-0.5 rounded-DEFAULT bg-surface-container hover:bg-surface-container-high border border-surface-dim text-[11px] font-meta-technical font-bold text-primary flex items-center gap-1 cursor-pointer transition-colors" title="Upvote issue severity">
+                    <span>▲</span>
+                    <span>${ticket.upvotes || 1}</span>
+                  </button>
+                </div>
+                <div class="space-y-1.5 flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="font-headline-md font-bold text-base text-primary leading-snug">
+                      ${ticket.title}
+                    </h3>
+                    <span class="px-2 py-0.5 rounded-DEFAULT border font-label-caps text-[10px] font-bold ${priorityClass}">
+                      AI: ${pLabel} (${pScore})
+                    </span>
+                    ${recurringBadge}
+                  </div>
+                  <div class="font-meta-technical text-xs text-secondary flex flex-wrap items-center gap-1.5">
+                    ${subtitleText}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 shrink-0 self-end md:self-center">
+                ${badgeHtml}
+                ${actionBtnHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 1-Click Verification & Upvote Global Handlers
+      window.quickConfirmResolution = function (ticketId) {
+        const all = window.getTickets ? window.getTickets() : [];
+        const ticket = all.find(t => t.id === ticketId);
+        if (!ticket) return;
+
+        // Check if 48h deadline has already expired
+        if (ticket.verificationDeadline && Date.now() > ticket.verificationDeadline) {
+          ticket.status = 'resolved';
+          ticket.closureType = 'auto_closed';
+          ticket.closedBy = 'system';
+          ticket.resolvedAt = ticket.verificationDeadline;
+          ticket.progress = 100;
+          if (window.saveTickets) window.saveTickets(all);
+          renderStudentTickets();
+          showStudentToast(`Notice: Issue #${ticketId} was auto-closed after the 48-hour window expired.`, "info");
+          return;
+        }
+
+        ticket.status = 'resolved';
+        ticket.closureType = 'student_verified';
+        ticket.closedBy = 'student';
+        ticket.progress = 100;
+        ticket.slaRemaining = 'Resolved';
+        ticket.resolvedAt = Date.now();
+        ticket.notes = `Confirmed & signed off by ${activeStudent.name}. Resolution verified.`;
+        if (!ticket.timeline) ticket.timeline = [];
+        ticket.timeline.push({
+          stage: 'Resolved — Student Verified',
+          time: 'Just now',
+          note: `Resolution confirmed by student (${activeStudent.name}). Ticket officially closed.`
+        });
+        if (window.apiVerifyTicket) {
+          window.apiVerifyTicket(ticketId, 'confirm', 5).catch(e => console.warn(e));
+        }
+        if (window.saveTickets) window.saveTickets(all, false);
+        renderStudentTickets();
+        showStudentToast(`Issue #${ticketId} confirmed resolved & officially closed!`, "success");
+      };
+
+      window.quickStillBroken = function (ticketId) {
+        const all = window.getTickets ? window.getTickets() : [];
+        const ticket = all.find(t => t.id === ticketId);
+        if (!ticket) return;
+
+        // Check if 48h deadline has expired
+        if (ticket.verificationDeadline && Date.now() > ticket.verificationDeadline) {
+          showStudentToast(`Action unavailable: The 48-hour verification window has expired. Ticket was auto-closed.`, "error");
+          return;
+        }
+
+        ticket.status = 'reopened';
+        ticket.closureType = 'reopened';
+        ticket.progress = 25;
+        delete ticket.verificationDeadline;
+        ticket.slaRemaining = 'Re-investigation Required';
+        ticket.notes = `Reported as still defective by ${activeStudent.name}. Urgent reinspection requested.`;
+        if (!ticket.timeline) ticket.timeline = [];
+        ticket.timeline.push({
+          stage: 'Reopened',
+          time: 'Just now',
+          note: `Student rejected resolution. Re-assigned to department for urgent action.`
+        });
+        if (window.apiVerifyTicket) {
+          window.apiVerifyTicket(ticketId, 'reopen', 1, 'Student marked still defective').catch(e => console.warn(e));
+        }
+        if (window.saveTickets) window.saveTickets(all, false);
+        renderStudentTickets();
+        showStudentToast(`Issue #${ticketId} reopened and reassigned to department!`, "error");
+      };
+
+      window.upvoteTicketFromCard = function (ticketId) {
+        const all = window.getTickets ? window.getTickets() : [];
+        const updated = window.CampusAI ? window.CampusAI.upvoteTicket(ticketId, activeStudent.id, all) : null;
+        if (updated) {
+          if (window.apiUpvoteTicket) {
+            window.apiUpvoteTicket(ticketId).catch(e => console.warn(e));
+          }
+          if (window.saveTickets) window.saveTickets(all, false);
+          renderStudentTickets();
+          showStudentToast(`Upvoted #${ticketId}! AI priority escalated to ${updated.priorityScore} (${updated.priorityLabel}).`, "success");
+        }
+      };
+
+      // escapeHtml utility for XSS protection
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // Campus-Wide Open Issues Feed Renderer
+      function renderOpenFeed() {
+        const feedList = document.getElementById('open-feed-list');
+        const feedBadge = document.getElementById('feed-count-badge');
+        const feedSearch = document.getElementById('feed-search');
+        const feedDeptFilter = document.getElementById('feed-filter-dept');
+        if (!feedList) return;
+
+        const allTickets = window.getTickets ? window.getTickets() : [];
+        const studentId = activeStudent ? activeStudent.id : null;
+        const search = feedSearch ? feedSearch.value.trim().toLowerCase() : '';
+        const deptFilter = feedDeptFilter ? feedDeptFilter.value : '';
+
+        let openTickets = allTickets.filter(t => t.status !== 'resolved' && t.status !== 'resolved');
+
+        if (deptFilter) {
+          openTickets = openTickets.filter(t => t.department === deptFilter);
+        }
+        if (search) {
+          openTickets = openTickets.filter(t => {
+            const hay = `${t.id} ${t.title} ${t.location} ${t.department || ''}`.toLowerCase();
+            return hay.includes(search);
+          });
+        }
+
+        // Sort by priority
+        openTickets = openTickets.sort((a, b) => (b.priorityScore || 50) - (a.priorityScore || 50));
+
+        if (feedBadge) feedBadge.textContent = openTickets.length;
+
+        if (openTickets.length === 0) {
+          feedList.innerHTML = `
+            <div class="p-10 text-center rounded-DEFAULT bg-surface border border-surface-dim text-secondary text-xs">
+              <span class="material-symbols-outlined text-3xl text-secondary mb-2 block">inbox</span>
+              <p class="font-bold text-primary">No open issues found matching your filter.</p>
+            </div>`;
+          return;
+        }
+
+        const sevClass = { critical: 'text-red-700', high: 'text-amber-700', moderate: 'text-blue-700', low: 'text-secondary' };
+
+        feedList.innerHTML = openTickets.map(t => {
+          const pScore = t.priorityScore || 30;
+          const pLabel = t.priorityLabel || (pScore >= 80 ? 'CRITICAL' : pScore >= 60 ? 'HIGH' : pScore >= 35 ? 'MEDIUM' : 'LOW');
+          const alreadyUpvoted = t.upvoters && studentId && t.upvoters.includes(studentId);
+          const isOwnTicket = t.studentId === studentId;
+          const statusLabel = (t.status || 'open').replace(/_/g, ' ');
+
+          return `
+            <div class="p-4 sm:p-5 rounded-DEFAULT bg-surface border border-surface-dim hover:border-outline shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-4 transition-all">
+              <div class="flex-1 min-w-0 space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-label-caps text-xs font-bold text-primary">#${escapeHtml(t.id)}</span>
+                  <span class="px-2 py-0.5 rounded-DEFAULT bg-surface-container text-secondary border border-surface-dim font-label-caps text-[10px] font-bold uppercase">${escapeHtml(statusLabel)}</span>
+                  <span class="px-2 py-0.5 rounded-DEFAULT bg-surface-container-high text-primary border border-surface-dim font-label-caps text-[10px] font-bold">AI: ${escapeHtml(pLabel)} (${pScore})</span>
+                  ${t.isRecurring ? '<span class="px-2 py-0.5 rounded-DEFAULT bg-purple-100 text-purple-800 border border-purple-300 font-label-caps text-[10px] font-bold">🔁 Recurring</span>' : ''}
+                  ${isOwnTicket ? '<span class="px-2 py-0.5 rounded-DEFAULT bg-blue-100 text-blue-800 border border-blue-300 font-label-caps text-[10px] font-bold">Your Report</span>' : ''}
+                </div>
+                <h3 class="font-headline-md font-bold text-base text-primary leading-snug">${escapeHtml(t.title)}</h3>
+                <div class="font-meta-technical text-xs text-secondary flex flex-wrap items-center gap-1.5">
+                  <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span>${escapeHtml(t.location)}</span>
+                  ${t.department ? `<span>•</span><span class="font-semibold">${escapeHtml(t.department)}</span>` : ''}
+                </div>
+                ${t.notes ? `<p class="text-xs text-on-surface-variant leading-relaxed line-clamp-2">${escapeHtml(t.notes)}</p>` : ''}
+                ${t.photoUrl ? `<div class="flex items-center gap-1 text-[11px] text-primary font-semibold"><span class="material-symbols-outlined text-[13px]">photo_camera</span>Photo evidence attached</div>` : ''}
+              </div>
+
+              <div class="flex items-center gap-3 shrink-0 self-start md:self-center">
+                <div class="flex flex-col items-center gap-0.5">
+                  <button
+                    onclick="window.upvoteFeedTicket('${escapeHtml(t.id)}')"
+                    type="button"
+                    class="px-3 py-1.5 rounded-DEFAULT ${alreadyUpvoted ? 'bg-primary text-on-primary cursor-not-allowed' : 'bg-surface-container hover:bg-primary hover:text-on-primary'} border border-surface-dim font-label-caps text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    ${alreadyUpvoted ? 'disabled title="Already upvoted"' : 'title="Upvote this issue to boost its priority"'}
+                  >
+                    <span class="material-symbols-outlined text-[15px]">arrow_upward</span>
+                    <span>${t.upvotes || 1}</span>
+                  </button>
+                  <span class="text-[10px] text-secondary">reports</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Upvote from Campus-Wide Feed
+      window.upvoteFeedTicket = function(ticketId) {
+        if (!activeStudent) return;
+        const allTickets = window.getTickets ? window.getTickets() : [];
+        const ticket = allTickets.find(t => t.id === ticketId);
+        if (!ticket) return;
+        if (ticket.upvoters && ticket.upvoters.includes(activeStudent.id)) {
+          showStudentToast('You have already upvoted this issue.', 'info');
+          return;
+        }
+        const updated = window.CampusAI ? window.CampusAI.upvoteTicket(ticketId, activeStudent.id, allTickets) : null;
+        if (updated) {
+          if (window.saveTickets) window.saveTickets(allTickets);
+          showStudentToast(`Upvoted #${ticketId}! Priority: ${updated.priorityScore} (${updated.priorityLabel}).`, 'success');
+          renderOpenFeed();
+        }
+      };
+
+      // Bind feed search and filter
+      const feedSearchEl = document.getElementById('feed-search');
+      const feedDeptEl = document.getElementById('feed-filter-dept');
+      if (feedSearchEl) feedSearchEl.addEventListener('input', renderOpenFeed);
+      if (feedDeptEl) feedDeptEl.addEventListener('change', renderOpenFeed);
+
+      // Initial Render
+      renderStudentTickets();
+
+      // Listen for Live Ticket Updates across Tabs / Roles
+      window.addEventListener('campus:tickets-updated', () => {
+        renderStudentTickets();
+        // Re-render feed if visible
+        if (sectionFeed && !sectionFeed.classList.contains('hidden')) {
+          renderOpenFeed();
+        }
+      });
+
+      // Cross-device polling every 30 seconds — skips when tab is hidden (Page Visibility API)
+      setInterval(() => {
+        if (document.hidden) return; // Don't poll when tab is in background
+        if (window.syncTicketsWithBackend) {
+          window.syncTicketsWithBackend().catch(() => {});
+        }
+      }, 30000);
+
+
+      // View All Toggle
+      const btnToggleViewAll = document.getElementById('btn-toggle-view-all');
+      if (btnToggleViewAll) {
+        btnToggleViewAll.addEventListener('click', () => {
+          viewingAllTickets = !viewingAllTickets;
+          renderStudentTickets();
+        });
+      }
+
+      // 11. Rule 14.B Review Modal Handlers
+      const reviewModal = document.getElementById('review-ticket-modal');
+      const btnCloseReview = document.getElementById('btn-close-review-modal');
+      const btnModalConfirmClose = document.getElementById('btn-modal-confirmclose');
+      const btnModalStillBroken = document.getElementById('btn-modal-stillbroken');
+
+      window.openReviewModal = function (ticketId) {
+        const all = window.getTickets ? window.getTickets() : [];
+        const ticket = all.find(t => t.id === ticketId);
+        if (!ticket) return;
+
+        currentReviewTicket = ticket;
+        modalReviewRating = 5;
+
+        const idEl = document.getElementById('modal-review-ticket-id');
+        const deptEl = document.getElementById('modal-review-dept');
+        const titleEl = document.getElementById('modal-review-title');
+        const locEl = document.getElementById('modal-review-loc');
+        const proofTimeEl = document.getElementById('modal-review-prooftime');
+        const techNameEl = document.getElementById('modal-review-techname');
+        const notesEl = document.getElementById('modal-review-notes');
+        const imgEl = document.getElementById('modal-review-img');
+        const countdownText = document.getElementById('modal-review-countdown-text');
+
+        if (idEl) idEl.textContent = `#${ticket.id}`;
+        if (deptEl) deptEl.textContent = ticket.department || 'Maintenance';
+        if (titleEl) titleEl.textContent = ticket.title;
+        if (locEl) locEl.textContent = ticket.location || 'Hostel Block 4';
+        if (proofTimeEl) proofTimeEl.textContent = `Uploaded ${ticket.proofUploaded || '12:44 PM'}`;
+        if (techNameEl) techNameEl.textContent = `Tech: ${ticket.assignedCrew || 'Staff Electrician'}`;
+        if (notesEl) notesEl.textContent = ticket.notes || 'Work completed by technician. Please verify and confirm.';
+        if (imgEl && ticket.proofPhoto) imgEl.src = ticket.proofPhoto;
+
+        if (countdownText) {
+          if (ticket.verificationDeadline) {
+            const diffMs = ticket.verificationDeadline - Date.now();
+            if (diffMs > 0) {
+              const h = Math.floor(diffMs / (3600 * 1000));
+              const m = Math.floor((diffMs % (3600 * 1000)) / (60 * 1000));
+              countdownText.textContent = `${h}h ${m}m remaining`;
+            } else {
+              countdownText.textContent = `Window expired`;
+            }
+          } else {
+            countdownText.textContent = `48h window active`;
+          }
+        }
+
+        // Reset stars
+        const modalStars = document.querySelectorAll('#modal-star-rating-desk .modal-star-btn');
+        modalStars.forEach(s => {
+          s.classList.add('text-primary');
+          s.classList.remove('text-surface-dim');
+        });
+
+        if (reviewModal) reviewModal.classList.remove('hidden');
+      };
+
+      if (btnCloseReview && reviewModal) {
+        btnCloseReview.addEventListener('click', () => reviewModal.classList.add('hidden'));
+      }
+
+      // Star rating in modal
+      const modalStarBtns = document.querySelectorAll('#modal-star-rating-desk .modal-star-btn');
+      modalStarBtns.forEach(star => {
+        star.addEventListener('click', () => {
+          const val = parseInt(star.dataset.star, 10) || 5;
+          modalReviewRating = val;
+          modalStarBtns.forEach((s, idx) => {
+            if (idx < val) {
+              s.classList.add('text-primary');
+              s.classList.remove('text-surface-dim');
+            } else {
+              s.classList.remove('text-primary');
+              s.classList.add('text-surface-dim');
+            }
+          });
+          showStudentToast(`Affirmation rating set to ${val} Stars.`, "info");
+        });
+      });
+
+      // Confirm & Close from Modal
+      if (btnModalConfirmClose) {
+        btnModalConfirmClose.addEventListener('click', () => {
+          if (!currentReviewTicket) return;
+          const ticketId = currentReviewTicket.id;
+
+          const tickets = window.getTickets ? window.getTickets() : [];
+          const idx = tickets.findIndex(t => t.id === ticketId);
+          if (idx !== -1) {
+            // Check deadline
+            if (tickets[idx].verificationDeadline && Date.now() > tickets[idx].verificationDeadline) {
+              tickets[idx].status = 'resolved';
+              tickets[idx].closureType = 'auto_closed';
+              tickets[idx].closedBy = 'system';
+              tickets[idx].resolvedAt = tickets[idx].verificationDeadline;
+              tickets[idx].progress = 100;
+              if (window.saveTickets) window.saveTickets(tickets);
+              if (reviewModal) reviewModal.classList.add('hidden');
+              renderStudentTickets();
+              showStudentToast(`Notice: Issue #${ticketId} was auto-closed after 48-hour timeout.`, "info");
+              return;
+            }
+
+            tickets[idx].status = 'resolved';
+            tickets[idx].closureType = 'student_verified';
+            tickets[idx].closedBy = 'student';
+            tickets[idx].progress = 100;
+            tickets[idx].slaRemaining = 'Resolved';
+            tickets[idx].rating = modalReviewRating;
+            tickets[idx].resolvedAt = Date.now();
+            tickets[idx].notes = `Confirmed & signed off by ${activeStudent.name} (${modalReviewRating}★). Student resolution verified.`;
+            if (!tickets[idx].timeline) tickets[idx].timeline = [];
+            tickets[idx].timeline.push({
+              stage: 'Resolved — Student Verified',
+              time: 'Just now',
+              note: `Audit signed by ${activeStudent.name} (${modalReviewRating}★). Student verification completed.`
+            });
+            if (window.saveTickets) window.saveTickets(tickets);
+            else localStorage.setItem('campus_tickets_store_v2', JSON.stringify(tickets));
+
+            // Sync with backend API and trigger real-time broadcast
+            if (window.apiVerifyTicket) {
+              window.apiVerifyTicket(ticketId, 'confirm', modalReviewRating, `Confirmed & signed off by ${activeStudent.name}`).catch(e => console.warn(e));
+            }
+          }
+
+          if (reviewModal) reviewModal.classList.add('hidden');
+          renderStudentTickets();
+          showStudentToast(`Issue #${ticketId} verified and officially closed!`, "success");
+        });
+      }
+
+      // Still Broken from Modal
+      if (btnModalStillBroken) {
+        btnModalStillBroken.addEventListener('click', () => {
+          if (!currentReviewTicket) return;
+          const ticketId = currentReviewTicket.id;
+
+          const tickets = window.getTickets ? window.getTickets() : [];
+          const idx = tickets.findIndex(t => t.id === ticketId);
+          if (idx !== -1) {
+            // Check deadline
+            if (tickets[idx].verificationDeadline && Date.now() > tickets[idx].verificationDeadline) {
+              showStudentToast(`Cannot reopen: 48-hour verification window has elapsed. Ticket was auto-closed.`, "error");
+              return;
+            }
+
+            tickets[idx].status = 'reopened';
+            tickets[idx].closureType = 'reopened';
+            tickets[idx].progress = 25;
+            delete tickets[idx].verificationDeadline;
+            tickets[idx].slaRemaining = 'Re-investigation Dispatched';
+            tickets[idx].notes = `Flagged as still defective by reporter ${activeStudent.name}. Immediate reinspection dispatched.`;
+            if (!tickets[idx].timeline) tickets[idx].timeline = [];
+            tickets[idx].timeline.push({
+              stage: 'Reopened',
+              time: 'Just now',
+              note: 'Reporter flagged defect as unresolved. Supervisor notified and work order returned to queue.'
+            });
+            if (window.saveTickets) window.saveTickets(tickets);
+            else localStorage.setItem('campus_tickets_store_v2', JSON.stringify(tickets));
+
+            // Sync with backend API and trigger real-time broadcast
+            if (window.apiVerifyTicket) {
+              window.apiVerifyTicket(ticketId, 'reopen', 1, `Flagged as still defective by reporter ${activeStudent.name}`).catch(e => console.warn(e));
+            }
+          }
+
+          if (reviewModal) reviewModal.classList.add('hidden');
+          renderStudentTickets();
+          showStudentToast(`Issue #${ticketId} flagged as unresolved. Returned to department queue.`, "error");
+        });
+      }
+
+      // 12. Live Tracking Modal Handlers
+      const trackModal = document.getElementById('track-ticket-modal');
+      const btnCloseTrack = document.getElementById('btn-close-track-modal');
+      const btnDismissTrack = document.getElementById('btn-dismiss-track-modal');
+      const btnModalCosign = document.getElementById('btn-modal-cosign');
+      const modalCosignLabel = document.getElementById('btn-modal-cosign-label');
+
+      window.openTrackModal = function (ticketId) {
+        const all = window.getTickets ? window.getTickets() : [];
+        const ticket = all.find(t => t.id === ticketId);
+        if (!ticket) return;
+
+        currentTrackTicket = ticket;
+
+        const hdrEl = document.getElementById('modal-track-header');
+        const idEl = document.getElementById('modal-track-id');
+        const deptEl = document.getElementById('modal-track-dept');
+        const titleEl = document.getElementById('modal-track-title');
+        const locEl = document.getElementById('modal-track-loc');
+        const slaEl = document.getElementById('modal-track-sla');
+        const crewEl = document.getElementById('modal-track-crew');
+        const cosignTextEl = document.getElementById('modal-track-cosign-text');
+        const stepperContainer = document.getElementById('modal-track-stepper');
+        const timelineContainer = document.getElementById('modal-track-timeline');
+
+        if (hdrEl) hdrEl.textContent = `Tracking • #${ticket.id}`;
+        if (idEl) idEl.textContent = `#${ticket.id}`;
+        if (deptEl) deptEl.textContent = ticket.department || 'Plumbing';
+        if (titleEl) titleEl.textContent = ticket.title;
+        if (locEl) locEl.textContent = ticket.location || 'Hostel Block 4';
+        if (slaEl) slaEl.textContent = ticket.slaRemaining || '41m Remaining';
+        if (crewEl) crewEl.textContent = ticket.assignedCrew || 'Crew #04 (R. Murugan)';
+        if (cosignTextEl) cosignTextEl.textContent = `${ticket.upvotes || 12} Co-signed`;
+
+        // Render Stepper
+        if (stepperContainer) {
+          const stages = ["Submitted", "Dispatched", "In Progress", "Resolved"];
+          const currentStage = ticket.status === 'pending' ? 0 : (ticket.status === 'dispatched' ? 1 : (ticket.status === 'in_progress' ? 2 : 3));
+
+          stepperContainer.innerHTML = `
+            <div class="grid grid-cols-4 gap-2 text-center text-[10px] font-label-caps uppercase">
+              ${stages.map((stg, i) => {
+            const isPassed = i <= currentStage;
+            const isCurrent = i === currentStage;
+            return `
+                  <div class="flex flex-col items-center gap-1.5 ${isPassed ? 'text-primary font-bold' : 'text-secondary opacity-60'}">
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs ${isCurrent ? 'bg-primary text-on-primary ring-2 ring-primary ring-offset-2' : (isPassed ? 'bg-[#34C759] text-white' : 'bg-surface-container text-secondary')}">
+                      ${isPassed && !isCurrent ? '✓' : (i + 1)}
+                    </div>
+                    <span>${stg}</span>
+                  </div>
+                `;
+          }).join('')}
+            </div>
+            <div class="w-full h-1.5 rounded-DEFAULT bg-surface-container overflow-hidden mt-3">
+              <div class="bg-primary h-full transition-all" style="width: ${ticket.progress || 72}%"></div>
+            </div>
+          `;
+        }
+
+        // Render Timeline
+        if (timelineContainer) {
+          const tl = ticket.timeline || [
+            { stage: "Submitted", time: "45m ago", note: "Water cooler leak signal received." },
+            { stage: "Dispatched", time: "30m ago", note: "Crew #04 dispatched." },
+            { stage: "In Progress", time: "15m ago", note: "On-site repair active." }
+          ];
+
+          timelineContainer.innerHTML = tl.map(item => `
+            <div class="p-2.5 bg-surface rounded-DEFAULT border border-surface-dim space-y-0.5">
+              <div class="flex items-center justify-between text-secondary">
+                <span class="font-label-caps uppercase font-bold text-primary">${item.stage}</span>
+                <span>${item.time}</span>
+              </div>
+              <p class="text-on-surface-variant font-body-md text-[11px]">${item.note}</p>
+            </div>
+          `).join('');
+        }
+
+        if (trackModal) trackModal.classList.remove('hidden');
+      };
+
+      if (btnCloseTrack && trackModal) {
+        btnCloseTrack.addEventListener('click', () => trackModal.classList.add('hidden'));
+      }
+      if (btnDismissTrack && trackModal) {
+        btnDismissTrack.addEventListener('click', () => trackModal.classList.add('hidden'));
+      }
+
+      // Modal Co-sign Button
+      if (btnModalCosign) {
+        btnModalCosign.addEventListener('click', () => {
+          if (!currentTrackTicket) return;
+          const ticketId = currentTrackTicket.id;
+
+          const tickets = window.getTickets ? window.getTickets() : [];
+          const updated = window.CampusAI ? window.CampusAI.upvoteTicket(ticketId, activeStudent.id, tickets) : null;
+          if (updated) {
+            if (window.saveTickets) window.saveTickets(tickets);
+            else localStorage.setItem('campus_tickets_store_v2', JSON.stringify(tickets));
+
+            const cosignTextEl = document.getElementById('modal-track-cosign-text');
+            if (cosignTextEl) cosignTextEl.textContent = `${updated.upvotes} Co-signed`;
+            if (modalCosignLabel) modalCosignLabel.textContent = "✓ Co-Signed";
+            btnModalCosign.classList.add('opacity-60', 'pointer-events-none');
+
+            renderStudentTickets();
+            showStudentToast(`Endorsed #${ticketId}! AI priority escalated to ${updated.priorityScore} (${updated.priorityLabel}).`, "success");
+          }
+        });
+      }
+
+      // 13. Audit Chain Modal Handlers
+      const auditModal = document.getElementById('audit-chain-modal');
+      const btnCloseAuditModal = document.getElementById('btn-close-audit-modal');
+      const btnConfirmAuditModal = document.getElementById('btn-confirm-audit-modal');
+
+      window.openAuditModalFor = function (ticketId) {
+        if (auditModal) auditModal.classList.remove('hidden');
+      };
+      if (btnCloseAuditModal && auditModal) {
+        btnCloseAuditModal.addEventListener('click', () => auditModal.classList.add('hidden'));
+      }
+      if (btnConfirmAuditModal && auditModal) {
+        btnConfirmAuditModal.addEventListener('click', () => auditModal.classList.add('hidden'));
+      }
+
+      // 14. Header Navigation & Logout
+      const btnHeaderLogout = document.getElementById('btn-header-logout');
+      if (btnHeaderLogout) {
+        btnHeaderLogout.addEventListener('click', () => {
+          if (window.logout) {
+            window.logout("Student institutional session ended.");
+          } else {
+            localStorage.removeItem('campus_auth_session');
+          }
+          window.location.href = "index.html";
+        });
+      }
+
+      // 15. Deep Linking & Auto-Scroll to Raise Ticket Intake
+      const checkRaiseTicketIntent = () => {
+        const hash = window.location.hash;
+        const search = new URLSearchParams(window.location.search);
+        if (hash === '#intake-section' || hash === '#raise-ticket' || search.get('action') === 'raise') {
+          const intakeForm = document.getElementById('ticket-intake-form') || document.getElementById('incident-title');
+          if (intakeForm) {
+            setTimeout(() => {
+              intakeForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              const titleInp = document.getElementById('incident-title');
+              if (titleInp) titleInp.focus();
+              showStudentToast("Ready to submit ticket: Please specify your campus grievance details.", "info");
+            }, 500);
+          }
+        }
+      };
+      if (document.readyState === 'complete') {
+        checkRaiseTicketIntent();
+      } else {
+        window.addEventListener('load', checkRaiseTicketIntent);
+      }
+
+    })();
+  </script>
+
+</body>
+
+</html>
