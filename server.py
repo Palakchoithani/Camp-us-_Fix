@@ -333,7 +333,7 @@ async def rbac_and_security_middleware(request: Request, call_next):
     # Check protected routes for authenticated browser access
     if path in PROTECTED_ROUTES:
         required_role = PROTECTED_ROUTES[path]
-        raw_token = request.cookies.get("campus_auth_token")
+        raw_token = request.cookies.get(f"campus_auth_token_{required_role}") or request.cookies.get("campus_auth_token")
         if not raw_token:
             auth_h = request.headers.get("Authorization", "")
             if auth_h.startswith("Bearer "):
@@ -769,38 +769,112 @@ def make_secure_cookie(name: str, value: str, max_age: int = 86400, http_only: b
 @app.post("/api/auth/login")
 async def api_auth_login(request: Request, response: Response):
     body = await request.json()
-    user_id = (body.get("userId") or body.get("username") or "").strip()
+    identifier = (body.get("identifier") or body.get("userId") or body.get("username") or body.get("email") or "").strip()
     password = (body.get("password") or "").strip()
+    role = (body.get("role") or "").strip().lower()
+    dept_name = (body.get("deptName") or body.get("departmentName") or body.get("department") or "").strip()
 
-    seed_users = {
-        "2024CS0123": {"id": "2024CS0123", "role": "student", "name": "Aarav K. Senapati", "email": "aarav.senapati@campus.edu", "deptName": None, "permissions": ["file_ticket", "view_my_tickets", "upvote_ticket", "view_bulletins"]},
-        "2023EE0102": {"id": "2023EE0102", "role": "student", "name": "Devansh Rao", "email": "devansh.rao@campus.edu", "deptName": None, "permissions": ["file_ticket", "view_my_tickets", "upvote_ticket", "view_bulletins"]},
-        "EMP-ADM-001": {"id": "EMP-ADM-001", "role": "admin", "name": "Prof. S. Sharma", "email": "dean.sharma@campus.edu", "deptName": None, "permissions": ["all", "master_incidents", "escalate_ombudsman", "reassign_dept", "broadcast_alert", "audit_logs"]},
-        "DEPT-OPS-01": {"id": "DEPT-OPS-01", "role": "department", "name": "Department Dispatch Officer", "email": "dispatch@campus.edu", "deptName": "Facility Maintenance & Plumbing", "permissions": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]},
-        "DEPT-PLUMB-04": {"id": "DEPT-PLUMB-04", "role": "department", "name": "R. Murugan", "email": "dispatch.plumbing@campus.edu", "deptName": "Facility Maintenance & Plumbing", "permissions": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]},
-        "DEPT-ELECT-02": {"id": "DEPT-ELECT-02", "role": "department", "name": "Sunil Verma", "email": "dispatch.electrical@campus.edu", "deptName": "Campus Electrical & Power", "permissions": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]},
-        "DEPT-HOSTEL-01": {"id": "DEPT-HOSTEL-01", "role": "department", "name": "K. Deshmukh", "email": "dispatch.hostel@campus.edu", "deptName": "Hostel Sanitation & Food Services", "permissions": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]},
-        "DEPT-IT-01": {"id": "DEPT-IT-01", "role": "department", "name": "Vikram Mehta", "email": "dispatch.network@campus.edu", "deptName": "IT & Campus Network Services", "permissions": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]}
-    }
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Institutional registration number, ID, or email is required.")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required.")
 
-    user = seed_users.get(user_id)
+    # 1. First try database-level salted verification
+    user = database.verify_user_credentials(identifier, password, expected_role=role if role else None)
+
+    # 2. If not found in database, check seed user dictionary and common demo passwords
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid institutional user ID or credentials.")
+        ROLE_DEMO_PASSWORDS = {
+            "student": "StudentPass@2026",
+            "admin": "AdminDean@2026",
+            "department": "DeptOps@2026"
+        }
+        
+        seed_users = [
+            {"id": "2024CS0123", "role": "student", "name": "Aarav K. Senapati", "email": "aarav.senapati@campus.edu", "deptName": "Computer Science & Engineering", "division": "Hostel Block 4 • Suite 212", "designation": "Student Reporter"},
+            {"id": "2023EE0102", "role": "student", "name": "Devansh Rao", "email": "devansh.rao@campus.edu", "deptName": "Electrical Engineering", "division": "Hostel Block 2 • Room 104", "designation": "Student Reporter"},
+            {"id": "EMP-ADM-001", "role": "admin", "name": "Prof. S. Sharma", "email": "dean.sharma@campus.edu", "deptName": "Central Administration", "division": "Level 4 Executive", "designation": "Dean of Student Affairs & Chief Proctor"},
+            {"id": "DEPT-OPS-01", "role": "department", "name": "Department Dispatch Officer", "email": "dispatch@campus.edu", "deptName": "Facility Maintenance & Plumbing", "division": "Operations Desk", "designation": "Dispatch Command Lead"},
+            {"id": "DEPT-PLUMB-04", "role": "department", "name": "R. Murugan", "email": "dispatch.plumbing@campus.edu", "deptName": "Facility Maintenance & Plumbing", "division": "Plumbing Division", "designation": "West Quadrant Lead"},
+            {"id": "DEPT-ELECT-02", "role": "department", "name": "Sunil Verma", "email": "dispatch.electrical@campus.edu", "deptName": "Campus Electrical & Power", "division": "HT Distribution Wing", "designation": "Substation Lead"},
+            {"id": "DEPT-HOSTEL-01", "role": "department", "name": "K. Deshmukh", "email": "dispatch.hostel@campus.edu", "deptName": "Hostel Sanitation & Food Services", "division": "Hostel Mess & Sanitation Wing", "designation": "Hostel Operations Superintendent"},
+            {"id": "DEPT-IT-01", "role": "department", "name": "Vikram Mehta", "email": "dispatch.network@campus.edu", "deptName": "IT & Campus Network Services", "division": "Campus NOC & Server Vault", "designation": "Campus NOC Lead"},
+            {"id": "DEPT-SHE-01", "role": "department", "name": "Dr. Nalini Iyer", "email": "icc.she@campus.edu", "deptName": "SHE Complaint Cell", "division": "Internal Complaints Committee Desk", "designation": "ICC Presiding Officer"},
+            {"id": "DEPT-RAG-01", "role": "department", "name": "Col. P. Nair", "email": "antiragging.cell@campus.edu", "deptName": "Anti-Ragging Committee", "division": "24x7 Ombudsman Emergency Squad", "designation": "Proctorial Security Head"}
+        ]
 
-    # Validate password against known demo credentials per role
-    ROLE_DEMO_PASSWORDS = {
-        "student": "StudentPass@2026",
-        "admin": "AdminDean@2026",
-        "department": "DeptOps@2026"
+        id_lower = identifier.lower()
+        matched = None
+        for u in seed_users:
+            if u["id"].lower() == id_lower or u["email"].lower() == id_lower:
+                matched = dict(u)
+                break
+
+        if matched:
+            user_role = matched.get("role", "")
+            expected_pass = ROLE_DEMO_PASSWORDS.get(user_role)
+            if password == expected_pass:
+                user = matched
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid institutional credentials or unauthorized role.")
+
+    # 3. Dynamic Department Name Binding
+    if user.get("role") == "department" or role == "department":
+        user["role"] = "department"
+        dept_roster = {
+            "Facility Maintenance & Plumbing": {"name": "R. Murugan", "division": "Plumbing Division", "designation": "West Quadrant Lead"},
+            "Campus Electrical & Power": {"name": "Sunil Verma", "division": "HT Distribution Wing", "designation": "Substation Lead"},
+            "Civil & Structural Maintenance": {"name": "Eng. K. Mehta", "division": "Civil Infrastructure Wing", "designation": "Civil Works Overseer"},
+            "Network Infrastructure & IT": {"name": "Vikram Mehta", "division": "Campus NOC & Server Vault", "designation": "Campus NOC Lead"},
+            "IT & Campus Network Services": {"name": "Vikram Mehta", "division": "Campus NOC & Server Vault", "designation": "Campus NOC Lead"},
+            "Hostel Sanitation & Food Services": {"name": "K. Deshmukh", "division": "Hostel Mess & Sanitation Wing", "designation": "Hostel Operations Superintendent"},
+            "SHE Complaint Cell": {"name": "Dr. Nalini Iyer", "division": "Internal Complaints Committee Desk", "designation": "ICC Presiding Officer"},
+            "Anti-Ragging Committee": {"name": "Col. P. Nair", "division": "24x7 Ombudsman Emergency Squad", "designation": "Proctorial Security Head"}
+        }
+        if dept_name:
+            user["deptName"] = dept_name
+            user["department"] = dept_name
+            if dept_name in dept_roster:
+                user["name"] = dept_roster[dept_name]["name"]
+                user["division"] = dept_roster[dept_name]["division"]
+                user["designation"] = dept_roster[dept_name]["designation"]
+        elif not user.get("deptName"):
+            user["deptName"] = "Facility Maintenance & Plumbing"
+            user["department"] = "Facility Maintenance & Plumbing"
+
+    # 4. Attach permissions
+    role_perms = {
+        "student": ["file_ticket", "view_my_tickets", "upvote_ticket", "view_bulletins"],
+        "admin": ["all", "master_incidents", "escalate_ombudsman", "reassign_dept", "broadcast_alert", "audit_logs", "manage_all", "assign_department", "view_audit_logs", "sla_override", "analytics_read"],
+        "department": ["view_dept_tickets", "dispatch_crew", "update_ticket_status", "inventory_read"]
     }
-    expected_pass = ROLE_DEMO_PASSWORDS.get(user.get("role", ""))
-    if not password or (expected_pass and password != expected_pass):
-        raise HTTPException(status_code=401, detail="Invalid institutional credentials. Authentication rejected.")
+    user["permissions"] = role_perms.get(user["role"], [])
 
+    # 5. Issue server-signed JWT
     token = create_bearer_token(user)
-    response.set_cookie("campus_session_role", user["role"], max_age=86400, path="/")
-    response.set_cookie("campus_auth_token", token, max_age=86400, path="/")
-    return {"success": True, "token": token, "user": user}
+
+    # 6. Set HTTP cookies
+    user_role = user["role"]
+    max_age = 86400
+
+    response.set_cookie("campus_session_role", user_role, max_age=max_age, path="/", samesite="lax")
+    response.set_cookie("campus_auth_token", token, max_age=max_age, path="/", samesite="lax")
+    response.set_cookie(f"campus_auth_token_{user_role}", token, max_age=max_age, path="/", samesite="lax")
+
+    role_targets = {
+        "student": "student-dashboard.html",
+        "admin": "admin-dashboard.html",
+        "department": "department-dashboard.html"
+    }
+    target_url = role_targets.get(user_role, "index.html")
+
+    return {
+        "success": True,
+        "token": token,
+        "user": user,
+        "targetUrl": target_url
+    }
 
 @app.get("/api/auth/verify")
 async def verify_auth_session(request: Request):
@@ -814,8 +888,10 @@ async def verify_auth_session(request: Request):
 
 @app.post("/api/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie("campus_session_role")
-    response.delete_cookie("campus_auth_token")
+    response.delete_cookie("campus_session_role", path="/")
+    response.delete_cookie("campus_auth_token", path="/")
+    for r in ["student", "admin", "department"]:
+        response.delete_cookie(f"campus_auth_token_{r}", path="/")
     return {"success": True, "message": "Session terminated"}
 
 @app.get("/api/auth/google/login")

@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import time
+import hashlib
 import sqlite3
 from collections import defaultdict
 from typing import List, Dict, Any, Optional
@@ -22,6 +23,11 @@ def get_connection():
     conn.execute("PRAGMA synchronous = NORMAL;")
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
+
+def hash_password(plain_text: str, salt: str = "") -> str:
+    """Computes salted SHA-256 password hash compatible across auth layers."""
+    payload = f"CAMPUS_SALT_{salt}_KEY_{plain_text}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 def init_db():
     """Initializes tables, indexes, and seeds initial data if database is empty."""
@@ -40,9 +46,20 @@ def init_db():
                 picture TEXT,
                 designation TEXT,
                 division TEXT,
+                password_hash TEXT,
+                salt TEXT,
                 created_at INTEGER NOT NULL
             );
             """)
+
+            # Auto-migrate columns if missing in existing database file
+            cur_info = conn.cursor()
+            cur_info.execute("PRAGMA table_info(users);")
+            existing_cols = {col[1] for col in cur_info.fetchall()}
+            if "password_hash" not in existing_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT;")
+            if "salt" not in existing_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN salt TEXT;")
 
             # 2. Departments table
             conn.execute("""
@@ -178,22 +195,145 @@ def seed_initial_data(conn: sqlite3.Connection):
         conn.executemany("INSERT INTO departments (id, name, code, lead_name, contact_channel) VALUES (?,?,?,?,?);", departments)
         conn.commit()
 
-    # Seed initial authorized users
-    cur.execute("SELECT COUNT(*) as cnt FROM users;")
-    if cur.fetchone()["cnt"] == 0:
-        now_ts = int(time.time() * 1000)
-        seed_users = [
-            ("2024CS0123", "Aarav K. Senapati", "aarav.senapati@campus.edu", "student", "Computer Science & Engineering", "", "Student Reporter", "Hostel Block 4 • Suite 212", now_ts),
-            ("EMP-ADM-001", "Prof. S. Sharma", "dean.sharma@campus.edu", "admin", "Central Administration", "", "Dean of Student Affairs & Chief Proctor", "Level 4 Executive", now_ts),
-            ("DEPT-OPS-01", "Department Dispatch Officer", "dispatch@campus.edu", "department", "Facility Maintenance & Plumbing", "", "Dispatch Command Lead", "Operations Desk", now_ts),
-            ("DEPT-PLUMB-04", "R. Murugan", "dispatch.plumbing@campus.edu", "department", "Facility Maintenance & Plumbing", "", "West Quadrant Lead", "Plumbing Division", now_ts),
-            ("DEPT-ELECT-02", "Sunil Verma", "dispatch.electrical@campus.edu", "department", "Campus Electrical & Power", "", "Substation Lead", "HT Distribution Wing", now_ts)
-        ]
-        conn.executemany("""
-        INSERT OR IGNORE INTO users (id, name, email, role, dept_name, picture, designation, division, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """, seed_users)
-        conn.commit()
+    # Seed initial authorized users with cryptographically salted hashes
+    now_ts = int(time.time() * 1000)
+    seed_users_config = [
+        {
+            "id": "2024CS0123",
+            "name": "Aarav K. Senapati",
+            "email": "aarav.senapati@campus.edu",
+            "role": "student",
+            "dept_name": "Computer Science & Engineering",
+            "picture": "",
+            "designation": "Student Reporter",
+            "division": "Hostel Block 4 • Suite 212",
+            "salt": "a1b2c3d4e5f60718",
+            "pass": "StudentPass@2026"
+        },
+        {
+            "id": "2023EE0102",
+            "name": "Devansh Rao",
+            "email": "devansh.rao@campus.edu",
+            "role": "student",
+            "dept_name": "Electrical Engineering",
+            "picture": "",
+            "designation": "Student Reporter",
+            "division": "Hostel Block 2 • Room 104",
+            "salt": "f1e2d3c4b5a60718",
+            "pass": "StudentPass@2026"
+        },
+        {
+            "id": "EMP-ADM-001",
+            "name": "Prof. S. Sharma",
+            "email": "dean.sharma@campus.edu",
+            "role": "admin",
+            "dept_name": "Central Administration",
+            "picture": "",
+            "designation": "Dean of Student Affairs & Chief Proctor",
+            "division": "Level 4 Executive",
+            "salt": "9f8e7d6c5b4a3120",
+            "pass": "AdminDean@2026"
+        },
+        {
+            "id": "DEPT-OPS-01",
+            "name": "Department Dispatch Officer",
+            "email": "dispatch@campus.edu",
+            "role": "department",
+            "dept_name": "Facility Maintenance & Plumbing",
+            "picture": "",
+            "designation": "Dispatch Command Lead",
+            "division": "Operations Desk",
+            "salt": "1a2b3c4d5e6f7a8b",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-PLUMB-04",
+            "name": "R. Murugan",
+            "email": "dispatch.plumbing@campus.edu",
+            "role": "department",
+            "dept_name": "Facility Maintenance & Plumbing",
+            "picture": "",
+            "designation": "West Quadrant Lead",
+            "division": "Plumbing Division",
+            "salt": "3c4d5e6f7a8b9c0d",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-ELECT-02",
+            "name": "Sunil Verma",
+            "email": "dispatch.electrical@campus.edu",
+            "role": "department",
+            "dept_name": "Campus Electrical & Power",
+            "picture": "",
+            "designation": "Substation Lead",
+            "division": "HT Distribution Wing",
+            "salt": "7e8f9a0b1c2d3e4f",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-HOSTEL-01",
+            "name": "K. Deshmukh",
+            "email": "dispatch.hostel@campus.edu",
+            "role": "department",
+            "dept_name": "Hostel Sanitation & Food Services",
+            "picture": "",
+            "designation": "Hostel Operations Superintendent",
+            "division": "Hostel Mess & Sanitation Wing",
+            "salt": "8b9c0d1e2f3a4b5c",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-IT-01",
+            "name": "Vikram Mehta",
+            "email": "dispatch.network@campus.edu",
+            "role": "department",
+            "dept_name": "IT & Campus Network Services",
+            "picture": "",
+            "designation": "Campus NOC Lead",
+            "division": "Campus NOC & Server Vault",
+            "salt": "5d6e7f8a9b0c1d2e",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-SHE-01",
+            "name": "Dr. Nalini Iyer",
+            "email": "icc.she@campus.edu",
+            "role": "department",
+            "dept_name": "SHE Complaint Cell",
+            "picture": "",
+            "designation": "ICC Presiding Officer",
+            "division": "Internal Complaints Committee Desk",
+            "salt": "2a3b4c5d6e7f8a9b",
+            "pass": "DeptOps@2026"
+        },
+        {
+            "id": "DEPT-RAG-01",
+            "name": "Col. P. Nair",
+            "email": "antiragging.cell@campus.edu",
+            "role": "department",
+            "dept_name": "Anti-Ragging Committee",
+            "picture": "",
+            "designation": "Proctorial Security Head",
+            "division": "24x7 Ombudsman Emergency Squad",
+            "salt": "4e5f6a7b8c9d0e1f",
+            "pass": "DeptOps@2026"
+        }
+    ]
+
+    for u in seed_users_config:
+        p_hash = hash_password(u["pass"], u["salt"])
+        conn.execute("""
+        INSERT INTO users (id, name, email, role, dept_name, picture, designation, division, password_hash, salt, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            password_hash = excluded.password_hash,
+            salt = excluded.salt,
+            role = excluded.role,
+            dept_name = excluded.dept_name,
+            name = excluded.name,
+            email = excluded.email;
+        """, (u["id"], u["name"], u["email"], u["role"], u["dept_name"], u.get("picture", ""), u.get("designation", ""), u.get("division", ""), p_hash, u["salt"], now_ts))
+    conn.commit()
 
     cur.execute("SELECT COUNT(*) as cnt FROM tickets;")
     if cur.fetchone()["cnt"] == 0:
@@ -780,6 +920,60 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
     finally:
         conn.close()
+
+def format_user_dict(row_dict: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": row_dict.get("id"),
+        "name": row_dict.get("name"),
+        "email": row_dict.get("email"),
+        "role": row_dict.get("role"),
+        "deptName": row_dict.get("dept_name") or row_dict.get("deptName") or "",
+        "department": row_dict.get("dept_name") or row_dict.get("deptName") or "",
+        "picture": row_dict.get("picture") or "",
+        "designation": row_dict.get("designation") or "",
+        "division": row_dict.get("division") or ""
+    }
+
+def get_user_by_id_or_email(identifier: str) -> Optional[Dict[str, Any]]:
+    """Fetches user record matching case-insensitive ID or email."""
+    if not identifier:
+        return None
+    cleaned = str(identifier).strip()
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT * FROM users 
+            WHERE LOWER(id) = LOWER(?) OR LOWER(email) = LOWER(?)
+            LIMIT 1;
+        """, (cleaned, cleaned))
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+def verify_user_credentials(identifier: str, password: str, expected_role: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Validates user credentials against salted database records.
+    Returns normalized user dict if valid, None otherwise.
+    """
+    if not identifier or not password:
+        return None
+    raw_user = get_user_by_id_or_email(identifier)
+    if not raw_user:
+        return None
+
+    if expected_role and raw_user.get("role"):
+        if raw_user["role"].lower() != str(expected_role).lower():
+            return None
+
+    salt = raw_user.get("salt") or ""
+    expected_hash = raw_user.get("password_hash")
+    if expected_hash:
+        computed_hash = hash_password(password, salt)
+        if computed_hash == expected_hash:
+            return format_user_dict(raw_user)
+    return None
 
 # Auto-initialize DB on import
 init_db()

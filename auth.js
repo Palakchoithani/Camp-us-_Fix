@@ -251,6 +251,7 @@
       const maxAge = Math.floor(SESSION_EXPIRY_MS / 1000);
       document.cookie = `campus_session_role=${encodeURIComponent(user.role)}; path=/; max-age=${maxAge}; SameSite=Lax`;
       document.cookie = `campus_auth_token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      document.cookie = `campus_auth_token_${encodeURIComponent(user.role)}=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
     } catch (e) {}
 
     updateNavSessionWidget();
@@ -378,6 +379,7 @@
         const maxAge = Math.floor(SESSION_EXPIRY_MS / 1000);
         document.cookie = `campus_session_role=${encodeURIComponent(session.user.role)}; path=/; max-age=${maxAge}; SameSite=Lax`;
         document.cookie = `campus_auth_token=${encodeURIComponent(session.token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        document.cookie = `campus_auth_token_${encodeURIComponent(session.user.role)}=${encodeURIComponent(session.token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
       } catch (e) {}
     }
 
@@ -405,6 +407,9 @@
       // Expire HTTP session cookies immediately
       document.cookie = "campus_session_role=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "campus_auth_token=; path=/; max-age=0; SameSite=Lax";
+      ['student', 'admin', 'department'].forEach(r => {
+        document.cookie = `campus_auth_token_${r}=; path=/; max-age=0; SameSite=Lax`;
+      });
     } catch (e) {}
 
     // Notify backend server to invalidate session if available
@@ -506,13 +511,67 @@
       throw new Error("Please select your Department Name.");
     }
 
-    // 3. Database lookup with common demo credentials support
+    const loginId = identifier || email;
+
+    // 3. Primary Authentication via Backend API (/api/auth/login)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: loginId,
+          identifier: loginId,
+          email: email || (loginId.includes('@') ? loginId : ''),
+          password: password,
+          role: role,
+          deptName: departmentName
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.user && data.token) {
+          resetFailedAttempts(role);
+          
+          // Clear prior generic active session to ensure clean role transition
+          try {
+            localStorage.removeItem('campus_auth_session');
+            sessionStorage.removeItem('campus_auth_session');
+          } catch (e) {}
+
+          saveSession(data.user, data.token);
+
+          return {
+            user: data.user,
+            token: data.token,
+            targetUrl: data.targetUrl
+          };
+        }
+      } else if (res.status === 401 || res.status === 400 || res.status === 403) {
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.detail || errData.message || errData.error || "Invalid institutional credentials. Please verify and try again.";
+        const locked = recordFailedAttempt(role);
+        if (locked) {
+          throw new Error("Maximum credential failure threshold reached. System locked for 60 seconds.");
+        }
+        throw new Error(msg);
+      }
+    } catch (fetchErr) {
+      // If error is a security lockout or credential rejection from backend, rethrow it
+      if (fetchErr.message && (fetchErr.message.includes("Invalid") || fetchErr.message.includes("locked") || fetchErr.message.includes("threshold") || fetchErr.message.includes("credentials"))) {
+        throw fetchErr;
+      }
+      // If fetch failed due to network / server offline, fall back gracefully to local offline authentication
+      console.warn("Backend login API unreachable, falling back to local verification:", fetchErr);
+    }
+
+    // 4. Offline Fallback (Local credential validation for purely offline environments)
     const users = await getStoredUsers();
     let user = null;
 
     if (role === 'department') {
-      // For department role: accepts common demo credentials (DEPT-OPS-01, dispatch@campus.edu)
-      // or any department identifier. The selected department name determines the active dashboard.
       user = users.find(u => u.role === 'department' && (u.id.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === email.toLowerCase())) ||
              users.find(u => u.role === 'department');
     } else if (role === 'student') {
@@ -528,18 +587,17 @@
       if (locked) {
         throw new Error("Maximum credential failure threshold reached. System locked for 60 seconds.");
       }
-      throw new Error(`No verified ${role} account found matching ID '${identifier}'.`);
+      throw new Error(`No verified ${role} account found matching ID '${identifier || email}'.`);
     }
 
-    // 4. Department Name Binding:
-    // Common demo credentials work for all departments.
-    // The selected department name determines which department dashboard/data is shown.
     if (role === 'department') {
       const deptRoster = {
         "Facility Maintenance & Plumbing": { name: "R. Murugan", division: "Facilities Operations Lead" },
         "Campus Electrical & Power": { name: "Sunil Verma", division: "Chief Electrical Inspector" },
+        "Civil & Structural Maintenance": { name: "Eng. K. Mehta", division: "Civil Infrastructure Wing" },
         "Hostel Sanitation & Food Services": { name: "K. Deshmukh", division: "Hostel Operations Superintendent" },
         "IT & Campus Network Services": { name: "Vikram Mehta", division: "Systems & Network Administrator" },
+        "Network Infrastructure & IT": { name: "Vikram Mehta", division: "Campus NOC & Server Vault" },
         "SHE Complaint Cell": { name: "Dr. Nalini Iyer", division: "ICC Presiding Officer" },
         "Anti-Ragging Committee": { name: "Col. P. Nair", division: "Proctorial Security Head" }
       };
@@ -554,7 +612,6 @@
       }
     }
 
-    // 5. Cryptographic hash comparison (same common demo passwords for respective roles)
     const incomingHash = await hashPassword(password, user.salt);
     const isDeptPass = (role === 'department' && password === 'DeptOps@2026');
     const isStudentPass = (role === 'student' && password === 'StudentPass@2026');
@@ -568,8 +625,12 @@
       throw new Error("Invalid password. Please check your credentials and try again.");
     }
 
-    // 6. Authentication Successful
     resetFailedAttempts(role);
+    try {
+      localStorage.removeItem('campus_auth_session');
+      sessionStorage.removeItem('campus_auth_session');
+    } catch (e) {}
+
     const token = await generateBearerToken(user);
     saveSession(user, token);
 
