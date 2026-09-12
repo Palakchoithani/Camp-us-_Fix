@@ -651,50 +651,67 @@
   window.signInWithGoogleRole = async function (role = 'student', departmentName = null) {
     resetFailedAttempts(role);
 
-    // 1. Try Firebase Auth (Zero-config on Firebase Hosting)
-    if (typeof window.firebase !== 'undefined' && window.__FIREBASE_CONFIG__ && window.__FIREBASE_CONFIG__.apiKey) {
+    // Dynamic loader helper
+    const ensureScript = (src) => new Promise((res, rej) => {
+      if (document.querySelector(`script[src="${src}"]`)) return res();
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => res();
+      s.onerror = (e) => rej(e);
+      document.head.appendChild(s);
+    });
+
+    // 1. Try Firebase Auth (Native Firebase Web Popup)
+    const fbCfg = window.__FIREBASE_CONFIG__ || {
+      apiKey: "AIzaSyCn-ZsFmAo-TQYezkgGtEMxaLUMb5Npxy8",
+      authDomain: "campus-fix-20547.firebaseapp.com",
+      projectId: "campus-fix-20547"
+    };
+
+    if (fbCfg && fbCfg.apiKey) {
       try {
-        if (!window.firebase.auth) {
-          await new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
-            s.onload = resolve;
-            s.onerror = reject;
-            document.head.appendChild(s);
-          });
+        if (typeof window.firebase === 'undefined') {
+          await ensureScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
         }
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        const result = await firebase.auth().signInWithPopup(provider);
-        if (result && result.user) {
-          const gUser = result.user;
-          const user = {
-            id: gUser.uid.slice(0, 10).toUpperCase(),
-            name: gUser.displayName || (role === 'student' ? 'Student' : 'Campus Officer'),
-            email: gUser.email,
-            role: role,
-            deptName: (role === 'department' ? (departmentName || 'Facility Maintenance & Plumbing') : null),
-            avatar: gUser.photoURL || null
-          };
-          const token = 'FB-' + btoa(JSON.stringify({ uid: gUser.uid, role, exp: Date.now() + 86400000 }));
-          saveSession(user, token);
-          return { success: true, user, token };
+        if (typeof window.firebase !== 'undefined' && !window.firebase.auth) {
+          await ensureScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
+        }
+        if (window.firebase && !window.firebase.apps.length) {
+          window.firebase.initializeApp(fbCfg);
+        }
+        if (window.firebase && window.firebase.auth) {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          const result = await firebase.auth().signInWithPopup(provider);
+          if (result && result.user) {
+            const gUser = result.user;
+            const user = {
+              id: gUser.uid.slice(0, 10).toUpperCase(),
+              name: gUser.displayName || (role === 'student' ? 'Student' : 'Campus Officer'),
+              email: gUser.email,
+              role: role,
+              deptName: (role === 'department' ? (departmentName || 'Facility Maintenance & Plumbing') : null),
+              avatar: gUser.photoURL || null
+            };
+            const token = 'FB-' + btoa(JSON.stringify({ uid: gUser.uid, role, exp: Date.now() + 86400000 }));
+            saveSession(user, token);
+            return { success: true, user, token };
+          }
         }
       } catch (fbErr) {
         console.warn('[Firebase Auth] Notice:', fbErr);
-        if (fbErr.code === 'auth/popup-closed-by-user') {
-          throw new Error('Sign-in cancelled.');
+        if (fbErr.code === 'auth/popup-closed-by-user' || fbErr.code === 'auth/cancelled-popup-request') {
+          throw new Error('Google Sign-In popup closed.');
         }
-        if (fbErr.code === 'auth/operation-not-allowed') {
-          throw new Error('Google Sign-In is not enabled yet in your Firebase Console. Go to Firebase Console > Authentication > Sign-in method > Enable Google. Or use Demo Institutional Login below!');
-        }
+        // If unauthorized domain or operation not allowed in Firebase, continue to GSI / backend redirect
       }
     }
 
     // 2. Google Identity Services (GSI) OAuth Client Fallback
     const clientId = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.GOOGLE_CLIENT_ID) || "341687061911-k4um60gt7pu01qdg4jj9ipge9hgj669i.apps.googleusercontent.com";
+    const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
 
-    // Check if Google OAuth code client popup is available and can be initiated
     if (window.google && window.google.accounts && window.google.accounts.oauth2) {
       try {
         return await new Promise((resolve, reject) => {
@@ -710,7 +727,8 @@
                 return reject(new Error(response.error_description || response.error));
               }
               try {
-                const apiRes = await fetch('/api/auth/google', {
+                const endpoint = (apiBase ? apiBase : '') + '/api/auth/google';
+                const apiRes = await fetch(endpoint, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -733,7 +751,11 @@
               if (hasSettled) return;
               hasSettled = true;
               console.warn("Google popup closed or blocked:", err);
-              reject(new Error("Google OAuth error: Please ensure https://campus-fix-20547.web.app is added to Authorized JavaScript Origins in Google Cloud Console, or use Institutional ID Login below."));
+              if (err && (err.type === 'popup_closed' || err.type === 'user_cancel')) {
+                return reject(new Error("Google popup closed by user."));
+              }
+              // Informative error with actionable instructions
+              reject(new Error("Google OAuth origin authorization pending. Use 'Fill demo credentials' below for instant 1-click login, or add this domain to Authorized JavaScript Origins in Google Cloud Console."));
             }
           });
           client.requestCode();
@@ -744,8 +766,8 @@
       }
     }
 
-    // Standard, guaranteed redirect flow (always works in all browsers and mobile)
-    const loginUrl = `/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}`;
+    // Standard redirect flow fallback if popup is completely unavailable
+    const loginUrl = `${apiBase}/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}&return_to=${encodeURIComponent(window.location.href)}`;
     window.location.href = loginUrl;
     return new Promise(() => {}); // Wait for page navigation
   };
