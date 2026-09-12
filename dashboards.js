@@ -569,6 +569,7 @@
   let ticketsCacheLoaded = false;
   let wsInstance = null;
   let wsReconnectTimer = null;
+  const pendingEmergencyAlerts = [];
 
   class CampusRealtimeManager {
     constructor() {
@@ -659,6 +660,7 @@
 
       wsInstance.onclose = () => {
         this.connected = false;
+        wsInstance = null;
         this.updateLiveIndicator(false);
         this.scheduleReconnect();
       };
@@ -724,6 +726,14 @@
         ticketsCache.unshift(data);
       }
 
+      if (type === 'emergency_alert' && (currentRole === 'admin' || currentRole === 'department')) {
+        const matchesDepartment = currentRole === 'admin' || (currentUser && currentUser.deptName === data.department);
+        if (matchesDepartment) {
+          if (typeof window.showEmergencyAlert === 'function') window.showEmergencyAlert(data);
+          else pendingEmergencyAlerts.push(data);
+        }
+      }
+
       // Notifications / In-app alerts based on role
       if (type === 'ticket_created') {
         if (currentRole === 'admin') {
@@ -757,6 +767,31 @@
   }
 
   window.CampusRealtime = new CampusRealtimeManager();
+
+  window.showEmergencyAlert = function (ticket) {
+    const stack = document.getElementById('campus-emergency-alert-stack') || (() => {
+      const created = document.createElement('div');
+      created.id = 'campus-emergency-alert-stack';
+      created.className = 'fixed top-20 right-4 z-[100] flex w-[min(94vw,420px)] flex-col gap-3';
+      document.body.appendChild(created);
+      return created;
+    })();
+    const alert = document.createElement('div');
+    alert.className = 'rounded-xl border-l-4 border-[#ba1a1a] bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden';
+    const latitude = Number(ticket.latitude ?? ticket.lat);
+    const longitude = Number(ticket.longitude ?? ticket.lng);
+    const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+    const mapUrl = hasCoordinates ? `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}` : '';
+    const safe = value => { const node = document.createElement('span'); node.textContent = String(value == null ? '' : value); return node.innerHTML; };
+    const time = new Date(Number(ticket.createdAt || ticket.created_at || Date.now())).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    alert.innerHTML = `<div class="flex items-start justify-between gap-3 bg-[#ba1a1a] px-4 py-3 text-white"><div><div class="text-[10px] font-bold uppercase tracking-wider text-white/80">🚨 EMERGENCY ALERT</div><div class="font-extrabold">${safe(ticket.emergencyType || ticket.category || 'Emergency')}</div></div><button type="button" class="text-xl leading-none text-white/80 hover:text-white" aria-label="Dismiss emergency alert">&times;</button></div><div class="space-y-2 px-4 py-3 text-xs text-[#1d1c16]"><div class="rounded-lg border-2 border-[#ba1a1a]/40 bg-[#fff3f1] px-3 py-2"><div class="text-[10px] font-bold uppercase text-[#ba1a1a]">Location</div><div class="font-extrabold text-[#7a0e0e]">${safe(ticket.location || 'Live location')}</div>${hasCoordinates ? `<div class="mt-1 font-mono text-[#7a0e0e]">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</div><a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex rounded-md bg-[#ba1a1a] px-2.5 py-1 font-bold text-white">View on Map</a>` : ''}</div><div class="font-semibold">A student needs immediate assistance.</div><div><b>Time:</b> ${safe(time)}</div><div><b>Student:</b> ${safe(ticket.isAnonymous ? 'Anonymous Student' : (ticket.studentName || 'Student'))}</div><div><b>Ticket:</b> ${safe(ticket.id)}</div><div><b>Details:</b> ${safe(ticket.description || ticket.notes || ticket.desc || ticket.title || 'Emergency reported')}</div></div><div class="flex justify-end border-t border-[#ded9d1] px-4 py-2"><button type="button" data-ack class="rounded-md bg-[#311419] px-3 py-1.5 text-xs font-bold text-white">Acknowledge / Dismiss</button></div>`;
+    const close = () => alert.remove();
+    alert.querySelector('button[aria-label]').addEventListener('click', close);
+    alert.querySelector('[data-ack]').addEventListener('click', close);
+    stack.appendChild(alert);
+  };
+
+  pendingEmergencyAlerts.splice(0).forEach(window.showEmergencyAlert);
 
   function getActiveRole() {
     if (typeof window !== 'undefined') {

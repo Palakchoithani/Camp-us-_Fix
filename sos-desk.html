@@ -832,7 +832,7 @@
   <script src="firebase-sync.js"></script>
   <script src="auth.js"></script>
   <script src="campus-ai.js"></script>
-  <script src="dashboards.js"></script>
+  <script src="dashboards.js?v=20260912_sos_live"></script>
 
   <script>
     (function () {
@@ -863,19 +863,28 @@
       }
 
       /* ---------- Server Sync ---------- */
-      async function syncWithServer() {
+      async function syncWithServer(ticket = null) {
         try {
-          const res = await fetch('/api/tickets', {
+          const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+          const res = await fetch(`${apiBase}/api/tickets`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(threads)
+            body: JSON.stringify(ticket || threads)
           });
+          if (!res.ok) throw new Error(`SOS API returned ${res.status}`);
           const data = await res.json();
-          if (data.success && Array.isArray(data.tickets)) {
+          if (!data.success) throw new Error('SOS API rejected the alert');
+          if (data.ticket) {
+            const index = threads.findIndex(item => item.id === data.ticket.id);
+            if (index >= 0) threads[index] = data.ticket;
+            localStorage.setItem('campus_tickets_store_v2', JSON.stringify(threads));
+          } else if (Array.isArray(data.tickets)) {
             localStorage.setItem('campus_tickets_store_v2', JSON.stringify(data.tickets));
           }
         } catch (e) {
           localStorage.setItem('campus_tickets_store_v2', JSON.stringify(threads));
+          console.error('[SOS] Emergency dispatch failed:', e);
+          toast('Emergency could not reach the response server. Please retry.', 'warn');
         }
       }
 
@@ -974,9 +983,12 @@
         });
       }
 
-      function dispatchSos(category = 'Safety', prefix = 'EMERGENCY ALERT', dept = 'Campus Security') {
+      function dispatchSos(category = 'Safety', prefix = 'EMERGENCY ALERT', dept = 'Campus Security', position = null) {
         const profile = JSON.parse(localStorage.getItem('campus_emergency_profile') || '{}');
-        const loc = profile.hostel ? `${profile.hostel} ${profile.room ? 'Rm ' + profile.room : ''} (${currentGps})` : currentGps;
+        const latitude = position ? Number(position.coords.latitude.toFixed(6)) : null;
+        const longitude = position ? Number(position.coords.longitude.toFixed(6)) : null;
+        const gpsLocation = position ? `Live GPS Location [${latitude}, ${longitude}]` : currentGps;
+        const loc = profile.hostel ? `${profile.hostel} ${profile.room ? 'Rm ' + profile.room : ''} (${gpsLocation})` : gpsLocation;
         const newId = "SOS-" + Math.floor(1000 + Math.random() * 9000);
 
         const ticket = {
@@ -995,11 +1007,17 @@
           confirmed: 0,
           channel: "Beacon",
           verified: true,
+          isEmergency: true,
+          emergencyType: category,
+          latitude,
+          longitude,
+          studentName: profile.contactName || "Student",
+          studentId: profile.studentId || "SOS-DESK",
           createdAt: Date.now()
         };
 
         threads.unshift(ticket);
-        syncWithServer();
+        syncWithServer(ticket);
         renderFeed();
         updateIntelligence();
 
@@ -1077,19 +1095,31 @@
       const btnBigSos = document.getElementById('btnBigSos');
       if (btnBigSos) {
         btnBigSos.addEventListener('click', () => {
-          dispatchSos('Safety', 'ONE-TAP SOS ALERT', 'Campus Security');
+          requestLiveSos('Safety', 'ONE-TAP SOS ALERT', 'SHE Complaint Cell');
         });
       }
 
       window.triggerQuickReport = function (name, type) {
         const catMap = {
-          fire: { cat: 'Electrical', dept: 'Fire & Facility Maintenance' },
-          medical: { cat: 'Safety', dept: 'Health Center Emergency Squad' },
-          safety: { cat: 'Safety', dept: 'Campus Security Flying Squad' }
+          fire: { cat: 'Electrical', dept: 'Campus Electrical & Power' },
+          medical: { cat: 'Safety', dept: 'Facility Maintenance & Plumbing' },
+          safety: { cat: 'Safety', dept: 'SHE Complaint Cell' }
         };
-        const conf = catMap[type] || { cat: 'Safety', dept: 'Campus Security' };
-        dispatchSos(conf.cat, `QUICK ALERT: ${name.toUpperCase()}`, conf.dept);
+        const conf = catMap[type] || { cat: 'Safety', dept: 'SHE Complaint Cell' };
+        requestLiveSos(conf.cat, `QUICK ALERT: ${name.toUpperCase()}`, conf.dept);
       };
+
+      function requestLiveSos(category, prefix, department) {
+        if (!navigator.geolocation) {
+          toast('Live location is unavailable. SOS was not dispatched.', 'warn');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          position => dispatchSos(category, prefix, department, position),
+          () => toast('Live location permission is required to dispatch SOS.', 'warn'),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
 
       /* ---------- Phone Call Modal ---------- */
       const callModal = document.getElementById('callModal');

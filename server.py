@@ -503,11 +503,15 @@ async def create_new_ticket(request: Request):
             existing = database.get_ticket_by_id(tid)
             if not existing:
                 ticket = database.create_ticket(item, actor)
+                is_emergency = bool(item.get("isEmergency") or item.get("emergencyType"))
+                if is_emergency:
+                    ticket["isEmergency"] = True
+                    ticket["emergencyType"] = item.get("emergencyType") or item.get("category") or "Emergency"
                 assigned_dept = ticket.get("department")
-                channels = ["global", "role:admin"]
+                channels = ["role:admin"] if is_emergency else ["global", "role:admin"]
                 if assigned_dept:
                     channels.append(f"dept:{assigned_dept}")
-                await ws_manager.broadcast("ticket_created", ticket, channels=channels)
+                await ws_manager.broadcast("emergency_alert" if is_emergency else "ticket_created", ticket, channels=channels)
             else:
                 # Check for status transition
                 item_status = item.get("status")
@@ -537,14 +541,18 @@ async def create_new_ticket(request: Request):
         return {"success": True, "tickets": database.get_all_tickets()}
 
     ticket = database.create_ticket(body, actor)
+    is_emergency = bool(body.get("isEmergency") or body.get("emergencyType"))
+    if is_emergency:
+        ticket["isEmergency"] = True
+        ticket["emergencyType"] = body.get("emergencyType") or body.get("category") or "Emergency"
     assigned_dept = ticket.get("department")
 
     # Broadcast real-time event instantly!
-    channels = ["global", "role:admin"]
+    channels = ["role:admin"] if is_emergency else ["global", "role:admin"]
     if assigned_dept:
         channels.append(f"dept:{assigned_dept}")
 
-    await ws_manager.broadcast("ticket_created", ticket, channels=channels)
+    await ws_manager.broadcast("emergency_alert" if is_emergency else "ticket_created", ticket, channels=channels)
     return {"success": True, "ticket": ticket}
 
 @app.post("/api/tickets/{ticket_id}/status")
