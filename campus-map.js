@@ -797,9 +797,10 @@
       }).join("");
     }
 
-    getNearestBuilding() {
-      if (!this.userCoordinates || !this.buildings || this.buildings.length === 0) return null;
-      const { lat, lng } = this.userCoordinates;
+    getNearestBuilding(customLat, customLng) {
+      const lat = typeof customLat === 'number' ? customLat : (this.userCoordinates ? this.userCoordinates.lat : null);
+      const lng = typeof customLng === 'number' ? customLng : (this.userCoordinates ? this.userCoordinates.lng : null);
+      if (lat === null || lng === null || !this.buildings || this.buildings.length === 0) return null;
       let nearest = null;
       let min = Infinity;
       this.buildings.forEach(b => {
@@ -810,6 +811,74 @@
         }
       });
       return nearest;
+    }
+
+    async resolveReadableLocation(lat, lng) {
+      // 1. Check nearest campus building
+      const nearest = this.getNearestBuilding(lat, lng);
+      const dist = nearest ? calcDistanceMeters(lat, lng, nearest.lat, nearest.lng) : Infinity;
+
+      // If within campus grounds / immediate facility proximity (<= 650m)
+      if (nearest && dist <= 650) {
+        return {
+          locationName: nearest.name,
+          buildingName: nearest.name,
+          zone: nearest.zone,
+          distance: dist,
+          isCampusZone: true
+        };
+      }
+
+      // 2. Beyond immediate campus hub: Attempt reverse geocoding via OpenStreetMap Nominatim with strict 2.5s abort timeout
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.address || {};
+          const primaryName = addr.amenity || addr.building || addr.office || addr.university || addr.road || addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.city || data.name;
+          const locality = addr.suburb || addr.neighbourhood || addr.city || addr.town || '';
+          if (primaryName) {
+            const readable = locality && !primaryName.toLowerCase().includes(locality.toLowerCase())
+              ? `${primaryName}, ${locality}`
+              : primaryName;
+            return {
+              locationName: readable,
+              buildingName: nearest ? nearest.name : readable,
+              zone: nearest ? nearest.zone : 'Campus Perimeter',
+              distance: dist,
+              isCampusZone: dist <= 1500
+            };
+          }
+        }
+      } catch (_) {
+        // Network timeout / offline fallback
+      }
+
+      // 3. Fallback to nearest campus location
+      if (nearest) {
+        return {
+          locationName: dist > 1200 ? `${nearest.name} (Perimeter)` : nearest.name,
+          buildingName: nearest.name,
+          zone: nearest.zone,
+          distance: dist,
+          isCampusZone: dist <= 1500
+        };
+      }
+
+      return {
+        locationName: `Campus Zone (${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E)`,
+        buildingName: 'Campus Grounds',
+        zone: 'Zone A • Campus Hub',
+        distance: null,
+        isCampusZone: false
+      };
     }
 
     highlightBuildingCard(bldgId) {
@@ -927,6 +996,24 @@
       }
     }
 
+    updateLocationTelemetryDisplay(lat, lng, accuracy, readableName, nearest) {
+      const issuesCount = (nearest && nearest.issues) ? nearest.issues.length : 0;
+      const bldgInfo = nearest
+        ? ` · 🏢 <strong class="text-[#5D3136]">${nearest.name}</strong> <span class="font-mono text-[10px] px-1.5 py-0.5 rounded ${issuesCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'} font-bold">(${issuesCount} Problem${issuesCount === 1 ? '' : 's'} Here)</span> <button onclick="window.focusCurrentLocationProblems('${this.containerId}')" class="ml-1 text-[#0284c7] hover:underline font-bold text-[11px] cursor-pointer inline-flex items-center gap-0.5"><span>View Details</span> <span>↗</span></button>`
+        : '';
+
+      const statusHtml = `📍 <strong class="text-[#311419] font-bold text-xs">${readableName}</strong> · <span class="text-[#594043] font-mono">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</span> (±${accuracy}m)${bldgInfo}`;
+      this.updateLocationStatus("active", statusHtml);
+
+      const badgeEl = document.getElementById(`${this.containerId}-gps-badge`);
+      if (badgeEl) {
+        badgeEl.textContent = `📍 ${readableName.toUpperCase()}`;
+      }
+
+      const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
+      if (locateLabel) locateLabel.textContent = "My Location";
+    }
+
     startWatchingPosition(recenterImmediate = false) {
       if (recenterImmediate) {
         this.recenterPending = true;
@@ -949,7 +1036,7 @@
 
       this.updateLocationStatus("searching", "Requesting device GPS location...");
 
-      const success = (pos) => {
+      const success = async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const accuracy = Math.round(pos.coords.accuracy || 10);
@@ -958,24 +1045,31 @@
         this.userCoordinates = { lat, lng, accuracy };
 
         this.updateBuildingDistances(lat, lng);
+
+        // Immediate nearest campus building match
+        const nearest = this.getNearestBuilding(lat, lng);
+        const initialLocName = nearest ? nearest.name : `Campus Area (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
+        this.userLocationPlaceName = initialLocName;
+        this.detectedBuildingName = nearest ? nearest.name : 'Campus Grounds';
+
+        this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest);
         this.updateUserBeacon();
-
-        const nearest = this.getNearestBuilding();
-        const issuesCount = (nearest && nearest.issues) ? nearest.issues.length : 0;
-        const bldgInfo = nearest
-          ? ` · 🏢 <strong class="text-[#5D3136]">${nearest.name}</strong> <span class="font-mono text-[10px] px-1.5 py-0.5 rounded ${issuesCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'} font-bold">(${issuesCount} Problem${issuesCount === 1 ? '' : 's'} Here)</span> <button onclick="window.focusCurrentLocationProblems('${this.containerId}')" class="ml-1 text-[#0284c7] hover:underline font-bold text-[11px] cursor-pointer inline-flex items-center gap-0.5"><span>View Details</span> <span>↗</span></button>`
-          : '';
-
-        const statusHtml = `Live GPS: <strong class="text-[#311419] font-mono">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</strong> (±${accuracy}m)${bldgInfo}`;
-        this.updateLocationStatus("active", statusHtml);
-
-        const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
-        if (locateLabel) locateLabel.textContent = "My Location";
 
         if (this.recenterPending) {
           this.recenterPending = false;
           this.recenterToUserLocation();
         }
+
+        // Asynchronous reverse-geocoding refinement if testing beyond immediate campus facility
+        try {
+          const resolved = await this.resolveReadableLocation(lat, lng);
+          if (resolved && resolved.locationName && resolved.locationName !== this.userLocationPlaceName) {
+            this.userLocationPlaceName = resolved.locationName;
+            this.detectedBuildingName = resolved.buildingName;
+            this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest);
+            this.updateUserBeacon();
+          }
+        } catch (_) {}
       };
 
       const error = (err) => {
@@ -1087,9 +1181,11 @@
       const L = window.Leaflet || window.L;
       const { lat, lng, accuracy } = this.userCoordinates;
 
-      let nearestBldg = this.getNearestBuilding();
+      let nearestBldg = this.getNearestBuilding(lat, lng);
       let minDistance = nearestBldg ? (nearestBldg.distance || calcDistanceMeters(lat, lng, nearestBldg.lat, nearestBldg.lng)) : null;
       const issuesAtLocation = nearestBldg ? (nearestBldg.issues || []) : [];
+      const resolvedName = this.userLocationPlaceName || (nearestBldg ? nearestBldg.name : `Campus Area (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      const resolvedBldgName = (nearestBldg ? nearestBldg.name : resolvedName);
 
       // Update Filter Button badge and visibility
       const myLocFilterBtn = document.getElementById(`${this.containerId}-filter-my-location`);
@@ -1178,6 +1274,9 @@
         `;
       }
 
+      const safeLocName = (resolvedName || '').replace(/'/g, "\\'");
+      const safeBldgName = (resolvedBldgName || '').replace(/'/g, "\\'");
+
       const popupContent = `
         <div class="p-4 text-[#311419] min-w-[280px] max-w-[340px]">
           <div class="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E2DBD0]">
@@ -1189,7 +1288,10 @@
             </span>
           </div>
 
-          <h4 class="font-bold text-xs text-[#311419]">Current User Location</h4>
+          <h4 class="font-bold text-sm text-[#311419] flex items-center gap-1.5 mb-1 leading-snug">
+            <span class="text-base text-[#0284c7]">📍</span>
+            <span>${resolvedName}</span>
+          </h4>
           <div class="font-mono text-[11px] text-[#594043] my-1.5 bg-[#f9f5ed] p-2 rounded-xl border border-[#e2dbd0] flex items-center justify-between">
             <div>
               <div class="font-bold text-[#311419]">${lat.toFixed(6)}°N, ${lng.toFixed(6)}°E</div>
@@ -1214,7 +1316,7 @@
 
           <!-- Actions -->
           <div class="pt-2 border-t border-[#e2dbd0] space-y-1.5">
-            <button onclick="window.dispatchMapLocationAction('${this.containerId}', '${nearestBldg ? nearestBldg.name : `GPS Position (${lat.toFixed(5)}, ${lng.toFixed(5)})`}', ${lat.toFixed(6)}, ${lng.toFixed(6)})" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#5D3136] to-[#7d3b42] hover:brightness-110 text-white text-xs font-bold font-mono tracking-wide uppercase shadow transition cursor-pointer flex items-center justify-center gap-1.5">
+            <button onclick="window.dispatchMapLocationAction('${this.containerId}', '${safeLocName}', ${lat.toFixed(6)}, ${lng.toFixed(6)}, '${safeBldgName}')" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#5D3136] to-[#7d3b42] hover:brightness-110 text-white text-xs font-bold font-mono tracking-wide uppercase shadow transition cursor-pointer flex items-center justify-center gap-1.5">
               <span>+ Raise Ticket at My Location</span>
             </button>
             ${issuesAtLocation.length > 0 ? `
@@ -1227,8 +1329,8 @@
       `;
 
       const tooltipContent = issuesAtLocation.length > 0
-        ? `📍 <strong>You Are Here</strong> · <span style="color: #fef08a; font-weight: bold;">⚠️ ${issuesAtLocation.length} Problem${issuesAtLocation.length === 1 ? '' : 's'}</span>`
-        : `📍 <strong>You Are Here</strong> · <span style="color: #bbf7d0; font-weight: bold;">✓ 0 Issues</span>`;
+        ? `📍 <strong>${resolvedName}</strong> · <span style="color: #fef08a; font-weight: bold;">⚠️ ${issuesAtLocation.length} Problem${issuesAtLocation.length === 1 ? '' : 's'}</span>`
+        : `📍 <strong>${resolvedName}</strong> · <span style="color: #bbf7d0; font-weight: bold;">✓ Live Location (±${accuracy}m)</span>`;
 
       if (!this.userMarker) {
         this.userMarker = L.marker([lat, lng], { icon: userPinIcon, zIndexOffset: 1000 }).addTo(this.map);
@@ -1263,19 +1365,48 @@
   }
 
   // Global Dispatcher for "+ Raise Ticket" clicks from any map instance
-  window.dispatchMapLocationAction = function (containerId, locationText, lat, lng) {
+  window.dispatchMapLocationAction = function (containerId, locationText, lat, lng, buildingName) {
     const inst = activeMapInstances[containerId];
+    const resolvedLoc = locationText || (inst && inst.userLocationPlaceName) || (inst && inst.getNearestBuilding() ? inst.getNearestBuilding().name : 'Campus Grounds');
+    const resolvedBldg = buildingName || (inst && inst.detectedBuildingName) || (inst && inst.getNearestBuilding() ? inst.getNearestBuilding().name : resolvedLoc);
+    const resolvedLat = typeof lat === 'number' ? lat : (inst && inst.userCoordinates ? inst.userCoordinates.lat : null);
+    const resolvedLng = typeof lng === 'number' ? lng : (inst && inst.userCoordinates ? inst.userCoordinates.lng : null);
+
     if (inst && typeof inst.options.onRaiseTicket === 'function') {
-      inst.options.onRaiseTicket(locationText, lat || null, lng || null);
+      inst.options.onRaiseTicket(resolvedLoc, resolvedLat, resolvedLng, resolvedBldg);
       return;
     }
 
     // Role-based default handlers
     // 1. Student Portal: open modal & fill location
-    const studentModal = document.getElementById('report-issue-modal');
-    const studentLocationInput = document.getElementById('report-input-location') || document.getElementById('modal-input-location');
+    const studentModal = document.getElementById('report-issue-modal') || document.getElementById('modal-file-issue');
+    const studentLocationInput = document.getElementById('report-input-location') || document.getElementById('modal-input-location') || document.getElementById('input-fixture-room');
+    const studentBldgSelect = document.getElementById('input-building-wing');
     if (studentModal) {
-      if (studentLocationInput) studentLocationInput.value = locationText;
+      if (studentBldgSelect && resolvedBldg) {
+        let matched = false;
+        for (let i = 0; i < studentBldgSelect.options.length; i++) {
+          const opt = studentBldgSelect.options[i];
+          if (opt.value.toLowerCase() === resolvedBldg.toLowerCase() || resolvedBldg.toLowerCase().includes(opt.value.toLowerCase())) {
+            studentBldgSelect.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          const newOpt = document.createElement('option');
+          newOpt.value = resolvedBldg;
+          newOpt.textContent = resolvedBldg;
+          studentBldgSelect.appendChild(newOpt);
+          studentBldgSelect.value = resolvedBldg;
+        }
+      }
+      if (studentLocationInput) studentLocationInput.value = resolvedLoc;
+      if (typeof resolvedLat === 'number' && typeof resolvedLng === 'number') {
+        studentModal._pendingLat = resolvedLat;
+        studentModal._pendingLng = resolvedLng;
+        studentModal._pendingLocationName = resolvedLoc;
+      }
       studentModal.classList.remove('hidden');
       return;
     }
@@ -1285,7 +1416,7 @@
     if (landingTicketSec) {
       const input = landingTicketSec.querySelector('input');
       if (input) {
-        input.value = `[${locationText}] - `;
+        input.value = `[${resolvedLoc}] - `;
         input.focus();
       }
       landingTicketSec.scrollIntoView({ behavior: 'smooth' });
@@ -1293,7 +1424,7 @@
     }
 
     // 3. Fallback alert
-    alert(`Selected: ${locationText}. Create ticket with this location.`);
+    alert(`Selected: ${resolvedLoc}. Create ticket with this location.`);
   };
 
   window.selectCampusBuilding = function (containerId, bldgId) {
@@ -1349,11 +1480,14 @@
       if (activeMapInstances[containerId].map) {
         activeMapInstances[containerId].map.invalidateSize();
       }
+      window.activeCampusMap = activeMapInstances[containerId];
       return activeMapInstances[containerId];
     }
 
     const controller = new CampusMapController(containerId, options);
     activeMapInstances[containerId] = controller;
+    window.activeCampusMap = controller;
+    window.activeMapInstances = activeMapInstances;
     return controller;
   };
 

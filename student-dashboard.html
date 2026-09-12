@@ -585,18 +585,32 @@
 
       <!-- Step 3: Location Details -->
       <div class="space-y-2">
-        <label class="font-label-caps text-xs text-primary uppercase font-bold">3. Location</label>
+        <div class="flex items-center justify-between">
+          <label class="font-label-caps text-xs text-primary uppercase font-bold">3. Location</label>
+          <button type="button" id="btn-modal-gps-locate" class="text-[11px] font-mono text-[#0284c7] hover:underline flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[13px]">my_location</span>
+            <span id="modal-gps-label">Use Live GPS Location</span>
+          </button>
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label class="block font-meta-technical text-[10px] text-secondary uppercase mb-1">Building</label>
             <select id="input-building-wing"
               class="w-full px-3 py-2 rounded-DEFAULT bg-surface-container-low border border-surface-dim text-primary text-xs focus:border-primary focus:outline-none">
+              <!-- Verified Campus Facilities -->
+              <option value="Main Academic &amp; Computing Wing">Main Academic &amp; Computing Wing</option>
+              <option value="Central Library &amp; Reading Commons">Central Library &amp; Reading Commons</option>
+              <option value="Aryabhatta Hostel Complex (Towers A-D)">Aryabhatta Hostel Complex (Towers A-D)</option>
+              <option value="Mechanical &amp; Electronics Labs">Mechanical &amp; Electronics Labs</option>
+              <option value="Main Mess &amp; Student Dining Hall">Main Mess &amp; Student Dining Hall</option>
+              <option value="Sports Complex &amp; Indoor Gymnasium">Sports Complex &amp; Indoor Gymnasium</option>
+              <option value="Administration Block &amp; Student Affairs">Administration Block &amp; Student Affairs</option>
+              <option value="Campus Security &amp; Utility Command Center">Campus Security &amp; Utility Command Center</option>
+              <!-- Legacy Quads & Hostels -->
               <option value="Hostel Block 4">Hostel Block 4</option>
               <option value="Ramanujan Academic Complex">Ramanujan Academic Complex</option>
               <option value="Turing Computing Labs">Turing Computing Labs</option>
-              <option value="Central Library">Central Library</option>
               <option value="Dining Hall 2 (Mess)">Dining Hall 2 (Mess)</option>
-              <option value="Indoor Sports Complex">Indoor Sports Complex</option>
             </select>
           </div>
           <div>
@@ -877,7 +891,7 @@
   <script src="dashboards.js"></script>
   <!-- Leaflet GIS Engine & Unified Campus Map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="campus-map.js"></script>
+  <script src="campus-map.js?v=20260912_loc"></script>
 
   <script>
     // ==========================================================================
@@ -998,10 +1012,99 @@
         btnBannerFile.addEventListener('click', window.openFileIssueModal);
       }
       if (btnCloseIntake && intakeModal) {
-        btnCloseIntake.addEventListener('click', () => intakeModal.classList.add('hidden'));
+        btnCloseIntake.addEventListener('click', () => {
+          intakeModal.classList.add('hidden');
+          intakeModal._pendingLat = null;
+          intakeModal._pendingLng = null;
+          intakeModal._pendingLocationName = null;
+        });
       }
       if (btnCancelIntake && intakeModal) {
-        btnCancelIntake.addEventListener('click', () => intakeModal.classList.add('hidden'));
+        btnCancelIntake.addEventListener('click', () => {
+          intakeModal.classList.add('hidden');
+          intakeModal._pendingLat = null;
+          intakeModal._pendingLng = null;
+          intakeModal._pendingLocationName = null;
+        });
+      }
+
+      // Intake Modal Live GPS Button
+      const btnModalGps = document.getElementById('btn-modal-gps-locate');
+      const modalGpsLabel = document.getElementById('modal-gps-label');
+      if (btnModalGps) {
+        btnModalGps.addEventListener('click', () => {
+          if (!navigator.geolocation) {
+            showStudentToast("Geolocation is not supported by your browser.", "error");
+            return;
+          }
+          if (modalGpsLabel) modalGpsLabel.textContent = "Detecting GPS...";
+          btnModalGps.disabled = true;
+
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const accuracy = Math.round(pos.coords.accuracy || 10);
+
+              let resolvedName = `Campus Zone (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
+              let resolvedBldg = 'Main Academic & Computing Wing';
+
+              // If active campus map instance exists, use its building resolver
+              const mapContainer = document.getElementById('student-campus-map-container');
+              if (window.activeCampusMap && typeof window.activeCampusMap.resolveReadableLocation === 'function') {
+                const res = await window.activeCampusMap.resolveReadableLocation(lat, lng);
+                if (res) {
+                  resolvedName = res.locationName;
+                  resolvedBldg = res.buildingName;
+                }
+              }
+
+              // Update building select
+              const buildingSelect = document.getElementById('input-building-wing');
+              if (buildingSelect && resolvedBldg) {
+                let matched = false;
+                for (let i = 0; i < buildingSelect.options.length; i++) {
+                  const opt = buildingSelect.options[i];
+                  if (opt.value.toLowerCase() === resolvedBldg.toLowerCase() ||
+                      resolvedBldg.toLowerCase().includes(opt.value.toLowerCase()) ||
+                      opt.value.toLowerCase().includes(resolvedBldg.toLowerCase())) {
+                    buildingSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                  }
+                }
+                if (!matched) {
+                  const newOpt = document.createElement('option');
+                  newOpt.value = resolvedBldg;
+                  newOpt.textContent = resolvedBldg;
+                  buildingSelect.appendChild(newOpt);
+                  buildingSelect.value = resolvedBldg;
+                }
+              }
+
+              const fixtureInput = document.getElementById('input-fixture-room');
+              if (fixtureInput) {
+                fixtureInput.value = `Live GPS Location (±${accuracy}m)`;
+              }
+
+              if (intakeModal) {
+                intakeModal._pendingLat = lat;
+                intakeModal._pendingLng = lng;
+                intakeModal._pendingLocationName = resolvedName;
+              }
+
+              if (modalGpsLabel) modalGpsLabel.textContent = `📍 ${resolvedName.length > 20 ? resolvedName.slice(0, 18) + '…' : resolvedName}`;
+              btnModalGps.disabled = false;
+              showStudentToast(`Location detected: ${resolvedName} (±${accuracy}m)`, "success");
+            },
+            (err) => {
+              btnModalGps.disabled = false;
+              if (modalGpsLabel) modalGpsLabel.textContent = "Use Live GPS Location";
+              showStudentToast("Location access unavailable. Please select your building manually.", "info");
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        });
       }
 
       // 5. Reporting Mode State (Verified Student vs Protected Anon)
@@ -1268,12 +1371,16 @@
 
             try {
               const allTickets = window.getTickets ? window.getTickets() : [];
+              const finalLocation = (intakeModal && intakeModal._pendingLocationName)
+                ? (fixture && !fixture.toLowerCase().includes('gps') ? `${intakeModal._pendingLocationName} • ${fixture}` : intakeModal._pendingLocationName)
+                : (fixture ? `${building} • ${fixture}` : building);
+
               const rawTicket = {
                 id: rawId,
                 title: title || `${selectedCategory}: ${fixture}`,
                 description: desc,
                 category: selectedCategory,
-                location: fixture ? `${building} • ${fixture}` : building,
+                location: finalLocation,
                 building: building,
                 fixture: fixture,
                 latitude: selectedLat,
@@ -1304,8 +1411,12 @@
               // Persist to server backend database
               let savedTicket = ticketToStore;
               if (window.apiCreateTicket) {
-                const res = await window.apiCreateTicket(ticketToStore);
-                if (res && res.ticket) savedTicket = res.ticket;
+                try {
+                  const res = await window.apiCreateTicket(ticketToStore);
+                  if (res && res.ticket) savedTicket = res.ticket;
+                } catch (apiErr) {
+                  console.warn("Backend API sync warning, saving to store:", apiErr);
+                }
               }
 
               allTickets.unshift(savedTicket);
@@ -1339,7 +1450,12 @@
               evidenceIcon.classList.remove("text-[#34C759]");
             }
 
-            if (intakeModal) intakeModal.classList.add('hidden');
+            if (intakeModal) {
+              intakeModal.classList.add('hidden');
+              intakeModal._pendingLat = null;
+              intakeModal._pendingLng = null;
+              intakeModal._pendingLocationName = null;
+            }
 
             renderStudentTickets();
           }, 300);
@@ -1406,18 +1522,44 @@
         if (window.initCampusMap) {
           window.initCampusMap('student-campus-map-container', {
             role: 'student',
-            onRaiseTicket: (loc, lat, lng) => {
+            onRaiseTicket: (loc, lat, lng, bldgName) => {
               if (intakeModal) {
                 intakeModal.classList.remove('hidden');
+
+                const targetBldg = bldgName || loc;
+                const buildingSelect = document.getElementById('input-building-wing');
+                if (buildingSelect && targetBldg) {
+                  let matched = false;
+                  for (let i = 0; i < buildingSelect.options.length; i++) {
+                    const opt = buildingSelect.options[i];
+                    if (opt.value.toLowerCase() === targetBldg.toLowerCase() ||
+                        targetBldg.toLowerCase().includes(opt.value.toLowerCase()) ||
+                        opt.value.toLowerCase().includes(targetBldg.toLowerCase())) {
+                      buildingSelect.selectedIndex = i;
+                      matched = true;
+                      break;
+                    }
+                  }
+                  if (!matched) {
+                    const newOpt = document.createElement('option');
+                    newOpt.value = targetBldg;
+                    newOpt.textContent = targetBldg;
+                    buildingSelect.appendChild(newOpt);
+                    buildingSelect.value = targetBldg;
+                  }
+                }
+
                 const fixtureInput = document.getElementById('input-fixture-room');
                 if (fixtureInput) {
-                  fixtureInput.value = loc;
+                  fixtureInput.value = (typeof lat === 'number') ? `Live GPS Location (±10m)` : (loc !== targetBldg ? loc : '');
                   fixtureInput.focus();
                 }
-                // Store lat/lng for ticket creation
+
+                // Store exact coordinates and detected location name
                 if (typeof lat === 'number' && typeof lng === 'number') {
                   intakeModal._pendingLat = lat;
                   intakeModal._pendingLng = lng;
+                  intakeModal._pendingLocationName = loc;
                 }
               }
             }

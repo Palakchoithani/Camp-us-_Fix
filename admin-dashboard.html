@@ -463,7 +463,7 @@
   <script src="dashboards.js"></script>
   <!-- Leaflet GIS Engine & Unified Campus Map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="campus-map.js"></script>
+  <script src="campus-map.js?v=20260912_loc"></script>
 
   <script>
     (function () {
@@ -802,9 +802,10 @@
                   <h3 class="font-headline font-bold text-base text-primary leading-snug break-words">${t.title}</h3>
 
                   <div class="text-xs text-secondary mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span class="flex items-center gap-1 text-on-surface">
+                    <span class="flex items-center gap-1 text-on-surface flex-wrap">
                       <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span>
                       <strong>${t.location}</strong>
+                      ${(t.latitude && t.longitude) ? `<span class="inline-flex items-center gap-0.5 text-[10px] font-mono text-[#0284c7] font-semibold bg-[#f0f9ff] px-1.5 py-0.5 rounded border border-[#bae6fd]" title="Coordinates: ${Number(t.latitude).toFixed(5)}, ${Number(t.longitude).toFixed(5)}">📍 ${Number(t.latitude).toFixed(4)}, ${Number(t.longitude).toFixed(4)}</span>` : ''}
                     </span>
                     <span>•</span>
                     <span>Department: <strong class="${isUnassigned ? 'text-amber-800' : 'text-primary'}">${t.department || 'Needs Department'}</strong></span>
@@ -1115,8 +1116,8 @@
         if (!adminMapInstance && window.initCampusMap) {
           adminMapInstance = window.initCampusMap('admin-campus-map-container', {
             role: 'admin',
-            onRaiseTicket: (loc) => {
-              window.toast(`Selected: ${loc}`, 'info');
+            onRaiseTicket: (loc, lat, lng) => {
+              window.toast(`📍 Selected Location: ${loc}${lat ? ` (${lat.toFixed(4)}, ${lng.toFixed(4)})` : ''}`, 'info');
             }
           });
         } else if (adminMapInstance) {
