@@ -1174,7 +1174,27 @@
       if (locateBtn) locateBtn.classList.add("opacity-80");
 
       return new Promise((resolve) => {
-        const handleSuccess = async (pos) => {
+        let watchId = null;
+        let settlingTimer = null;
+        let bestFix = null;
+        let hasFlown = false;
+
+        const cleanup = () => {
+          if (watchId !== null && navigator.geolocation) {
+            try { navigator.geolocation.clearWatch(watchId); } catch (_) {}
+            watchId = null;
+          }
+          if (settlingTimer !== null) {
+            clearTimeout(settlingTimer);
+            settlingTimer = null;
+          }
+        };
+
+        const commitFinalPosition = async (pos) => {
+          if (hasFlown) return;
+          hasFlown = true;
+          cleanup();
+
           if (this.locationRequestSeq !== requestId) {
             resolve(null);
             return;
@@ -1230,7 +1250,7 @@
           if (locateLabel) locateLabel.textContent = "My Location";
           resolve(this.userCoordinates);
 
-          // Dynamically refine address via reverse geocoding asynchronously
+          // Asynchronously reverse geocode and refine readable address
           (async () => {
             try {
               const resolved = await resolveDetailedLocation(lat, lng, this.buildings);
@@ -1258,9 +1278,42 @@
           })();
         };
 
+        const handleSuccess = (pos) => {
+          if (this.locationRequestSeq !== requestId || hasFlown) return;
+
+          const acc = (pos && pos.coords && typeof pos.coords.accuracy === 'number') ? pos.coords.accuracy : 9999;
+
+          // Track the best position received so far
+          if (!bestFix || acc < (bestFix.coords.accuracy || 9999)) {
+            bestFix = pos;
+          }
+
+          // If high accuracy (< 120m), settle immediately and fly!
+          if (acc <= 120) {
+            commitFinalPosition(pos);
+            return;
+          }
+
+          // If accuracy is coarse (> 120m), do NOT fly yet!
+          // Give the browser up to 2200ms to refine from Wi-Fi/GPS
+          if (!settlingTimer) {
+            settlingTimer = setTimeout(() => {
+              if (!hasFlown && bestFix) {
+                commitFinalPosition(bestFix);
+              } else if (!hasFlown) {
+                handleFailure({ code: 3, message: "GPS position settling timed out" });
+              }
+            }, 2200);
+          }
+        };
+
         const handleFailure = (err) => {
-          if (this.locationRequestSeq !== requestId) {
-            resolve(null);
+          if (this.locationRequestSeq !== requestId || hasFlown) return;
+          cleanup();
+
+          // If we already received a fix during this session, use it rather than failing
+          if (bestFix) {
+            commitFinalPosition(bestFix);
             return;
           }
 
@@ -1287,23 +1340,36 @@
           resolve(null);
         };
 
-        // Query fresh device position: start with maximumAge: 0 (fresh hardware fix).
-        // If timeout occurs (e.g. simulated environment or slow OS provider), fallback to maximumAge: 5000
-        navigator.geolocation.getCurrentPosition(
-          handleSuccess,
-          (err) => {
-            if (err.code === 3 && this.locationRequestSeq === requestId) {
-              navigator.geolocation.getCurrentPosition(
-                handleSuccess,
-                handleFailure,
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
-              );
-              return;
+        try {
+          watchId = navigator.geolocation.watchPosition(
+            handleSuccess,
+            (err) => {
+              if (bestFix) {
+                commitFinalPosition(bestFix);
+              } else {
+                handleFailure(err);
+              }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          );
+        } catch (e) {
+          navigator.geolocation.getCurrentPosition(
+            handleSuccess,
+            handleFailure,
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          );
+        }
+
+        // Hard timeout safety net after 8.5s
+        setTimeout(() => {
+          if (!hasFlown && this.locationRequestSeq === requestId) {
+            if (bestFix) {
+              commitFinalPosition(bestFix);
+            } else {
+              handleFailure({ code: 3, message: "GPS request timed out" });
             }
-            handleFailure(err);
-          },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-        );
+          }
+        }, 8500);
       });
     }
 
