@@ -865,7 +865,8 @@
       /* ---------- Server Sync ---------- */
       async function syncWithServer() {
         try {
-          const res = await fetch('/api/tickets', {
+          const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
+          const res = await fetch(`${apiBase}/api/tickets`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(threads)
@@ -995,6 +996,10 @@
           confirmed: 0,
           channel: "Beacon",
           verified: true,
+          isEmergency: true,
+          emergencyType: category,
+          studentName: profile.contactName || "Student",
+          studentId: profile.studentId || "SOS-DESK",
           createdAt: Date.now()
         };
 
@@ -1181,6 +1186,8 @@
             reportCategory: cat,
             department: "SHE Complaint Cell",
             dept: "SHE Complaint Cell",
+            isEmergency: true,
+            emergencyType: cat,
             desc: desc,
             location: loc,
             status: "escalated",
@@ -1228,6 +1235,8 @@
             reportCategory: cat,
             department: "Anti-Ragging Committee",
             dept: "Anti-Ragging Committee",
+            isEmergency: true,
+            emergencyType: cat,
             desc: desc,
             location: loc,
             status: "escalated",
