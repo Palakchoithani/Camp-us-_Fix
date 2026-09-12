@@ -863,38 +863,25 @@
       }
 
       /* ---------- Server Sync ---------- */
-      async function syncWithServer(ticket) {
+      async function syncWithServer() {
         try {
-          const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
-          const res = await fetch(`${apiBase}/api/tickets`, {
+          const res = await fetch('/api/tickets', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(ticket || threads)
+            body: JSON.stringify(threads)
           });
-          if (!res.ok) throw new Error(`Emergency API returned ${res.status}`);
           const data = await res.json();
-          if (!data.success) throw new Error('Emergency API rejected the alert');
-          if (data.ticket) {
-            const index = threads.findIndex(item => item.id === data.ticket.id);
-            if (index >= 0) threads[index] = data.ticket;
-            localStorage.setItem('campus_tickets_store_v2', JSON.stringify(threads));
-          } else if (Array.isArray(data.tickets)) {
+          if (data.success && Array.isArray(data.tickets)) {
             localStorage.setItem('campus_tickets_store_v2', JSON.stringify(data.tickets));
           }
-                      <div class="rounded-lg border border-[#ded9d1] bg-[#fbf6ec] p-3"><p class="text-[10px] font-bold uppercase text-[#73575b]">Time</p><p class="mt-1 font-semibold">${formatEmergencyTime(ticket.createdAt || ticket.created_at || Date.now())}</p></div>
-          return data;
         } catch (e) {
           localStorage.setItem('campus_tickets_store_v2', JSON.stringify(threads));
-          toast('Emergency could not reach the response server. Please retry.', 'warn');
-          console.error('[SOS] Emergency dispatch failed:', e);
-          return null;
         }
       }
 
       async function loadTickets() {
         try {
-          const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
-          const res = await fetch(`${apiBase}/api/tickets`);
+          const res = await fetch('/api/tickets');
           const serverTickets = await res.json();
           if (Array.isArray(serverTickets) && serverTickets.length > 0) {
             threads = serverTickets;
@@ -991,9 +978,6 @@
         const profile = JSON.parse(localStorage.getItem('campus_emergency_profile') || '{}');
         const loc = profile.hostel ? `${profile.hostel} ${profile.room ? 'Rm ' + profile.room : ''} (${currentGps})` : currentGps;
         const newId = "SOS-" + Math.floor(1000 + Math.random() * 9000);
-        const coordinates = currentGps.match(/\[\s*(-?\d+(?:\.\d+)?)°?\s*[NS]?\s*,\s*(-?\d+(?:\.\d+)?)°?\s*[EW]?\s*\]/i);
-        const latitude = coordinates ? Number(coordinates[1]) : null;
-        const longitude = coordinates ? Number(coordinates[2]) : null;
 
         const ticket = {
           id: newId,
@@ -1011,17 +995,11 @@
           confirmed: 0,
           channel: "Beacon",
           verified: true,
-          isEmergency: true,
-          emergencyType: category,
-          latitude,
-          longitude,
-          studentName: profile.contactName || "Student",
-          studentId: profile.studentId || "SOS-DESK",
           createdAt: Date.now()
         };
 
         threads.unshift(ticket);
-        syncWithServer(ticket);
+        syncWithServer();
         renderFeed();
         updateIntelligence();
 
@@ -1105,11 +1083,11 @@
 
       window.triggerQuickReport = function (name, type) {
         const catMap = {
-          fire: { cat: 'Electrical', dept: 'Campus Electrical & Power' },
-          medical: { cat: 'Safety', dept: 'Facility Maintenance & Plumbing' },
-          safety: { cat: 'Safety', dept: 'SHE Complaint Cell' }
+          fire: { cat: 'Electrical', dept: 'Fire & Facility Maintenance' },
+          medical: { cat: 'Safety', dept: 'Health Center Emergency Squad' },
+          safety: { cat: 'Safety', dept: 'Campus Security Flying Squad' }
         };
-        const conf = catMap[type] || { cat: 'Safety', dept: 'SHE Complaint Cell' };
+        const conf = catMap[type] || { cat: 'Safety', dept: 'Campus Security' };
         dispatchSos(conf.cat, `QUICK ALERT: ${name.toUpperCase()}`, conf.dept);
       };
 
@@ -1196,15 +1174,13 @@
           const authUser = authSession && authSession.user ? authSession.user : null;
 
           const newId = "SHE-" + Math.floor(1000 + Math.random() * 9000);
-          const ticket = {
+          threads.unshift({
             id: newId,
             title: `SHE Report: ${cat} at ${loc}`,
             category: "Safety",
             reportCategory: cat,
             department: "SHE Complaint Cell",
             dept: "SHE Complaint Cell",
-            isEmergency: true,
-            emergencyType: cat,
             desc: desc,
             location: loc,
             status: "escalated",
@@ -1214,9 +1190,8 @@
             studentName: isAnon ? "Anonymous Student" : (authUser && authUser.name ? authUser.name : "Confidential Reporter"),
             studentId: isAnon ? "ANON" : (authUser && authUser.id ? authUser.id : "PROTECTED"),
             createdAt: Date.now()
-          };
-          threads.unshift(ticket);
-          syncWithServer(ticket);
+          });
+          syncWithServer();
           renderFeed();
           updateIntelligence();
           window.closeSheModal();
@@ -1246,15 +1221,13 @@
           const authUser = authSession && authSession.user ? authSession.user : null;
 
           const newId = "RAG-" + Math.floor(1000 + Math.random() * 9000);
-          const ticket = {
+          threads.unshift({
             id: newId,
             title: `Anti-Ragging Report: [${cat}] at ${loc}`,
             category: "Safety",
             reportCategory: cat,
             department: "Anti-Ragging Committee",
             dept: "Anti-Ragging Committee",
-            isEmergency: true,
-            emergencyType: cat,
             desc: desc,
             location: loc,
             status: "escalated",
@@ -1267,9 +1240,8 @@
             studentName: authUser && authUser.name ? authUser.name : "Confidential Reporter",
             studentId: authUser && authUser.id ? authUser.id : "PROTECTED",
             createdAt: Date.now()
-          };
-          threads.unshift(ticket);
-          syncWithServer(ticket);
+          });
+          syncWithServer();
           renderFeed();
           updateIntelligence();
           window.closeRaggingModal();

@@ -569,7 +569,6 @@
   let ticketsCacheLoaded = false;
   let wsInstance = null;
   let wsReconnectTimer = null;
-  const pendingEmergencyAlerts = [];
 
   class CampusRealtimeManager {
     constructor() {
@@ -660,8 +659,6 @@
 
       wsInstance.onclose = () => {
         this.connected = false;
-        wsInstance = null;
-        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
         this.updateLiveIndicator(false);
         this.scheduleReconnect();
       };
@@ -727,17 +724,6 @@
         ticketsCache.unshift(data);
       }
 
-      if (type === 'emergency_alert' && (currentRole === 'admin' || currentRole === 'department')) {
-        const matchesDepartment = currentRole === 'admin' || (currentUser && (window.matchesDepartment ? window.matchesDepartment(data.department, currentUser.deptName) : currentUser.deptName === data.department));
-        if (matchesDepartment) {
-          if (typeof window.showEmergencyAlert === 'function') {
-            window.showEmergencyAlert(data);
-          } else {
-            pendingEmergencyAlerts.push(data);
-          }
-        }
-      }
-
       // Notifications / In-app alerts based on role
       if (type === 'ticket_created') {
         if (currentRole === 'admin') {
@@ -771,65 +757,6 @@
   }
 
   window.CampusRealtime = new CampusRealtimeManager();
-
-  window.showEmergencyAlert = function (ticket) {
-    const existing = document.getElementById('campus-emergency-alert-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'campus-emergency-alert-modal';
-    modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4';
-    modal.innerHTML = `
-      <div class="w-full max-w-lg rounded-2xl border border-[#ba1a1a]/30 bg-white shadow-2xl overflow-hidden" role="alertdialog" aria-modal="true" aria-labelledby="campus-emergency-alert-title">
-        <div class="flex items-center justify-between gap-4 bg-[#ba1a1a] px-5 py-4 text-white">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="material-symbols-outlined text-2xl">emergency</span>
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold uppercase tracking-wider text-white/80">🚨 EMERGENCY ALERT</p>
-              <h2 id="campus-emergency-alert-title" class="truncate text-lg font-extrabold">${escapeEmergencyText(ticket.emergencyType || ticket.category || 'Emergency')}</h2>
-            </div>
-          </div>
-          <button type="button" data-close-emergency-alert class="shrink-0 text-2xl leading-none text-white/80 hover:text-white" aria-label="Close emergency alert">&times;</button>
-        </div>
-        <div class="space-y-3 p-5 text-sm text-[#1d1c16]">
-          <p class="font-bold">Immediate response required for ticket #${escapeEmergencyText(ticket.id)}</p>
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="rounded-lg border-2 border-[#ba1a1a]/45 bg-[#fff3f1] p-3 sm:col-span-2"><p class="text-[10px] font-bold uppercase text-[#ba1a1a]">Location</p><p class="mt-1 text-base font-extrabold text-[#7a0e0e]">${escapeEmergencyText(ticket.location || 'Not provided')}</p>${emergencyCoordinates(ticket)}</div>
-            <div class="rounded-lg border border-[#ded9d1] bg-[#fbf6ec] p-3"><p class="text-[10px] font-bold uppercase text-[#73575b]">Time</p><p class="mt-1 font-semibold">${formatEmergencyTime(ticket.createdAt || Date.now())}</p></div>
-            <div class="rounded-lg border border-[#ded9d1] bg-[#fbf6ec] p-3"><p class="text-[10px] font-bold uppercase text-[#73575b]">Student</p><p class="mt-1 font-semibold">${escapeEmergencyText(ticket.isAnonymous ? 'Anonymous Student' : (ticket.studentName || 'Not provided'))}</p></div>
-            <div class="rounded-lg border border-[#ded9d1] bg-[#fbf6ec] p-3"><p class="text-[10px] font-bold uppercase text-[#73575b]">Department</p><p class="mt-1 font-semibold">${escapeEmergencyText(ticket.department || 'Campus Security')}</p></div>
-          </div>
-          <div class="rounded-lg border border-[#ded9d1] p-3"><p class="text-[10px] font-bold uppercase text-[#73575b]">Details</p><p class="mt-1 leading-relaxed">${escapeEmergencyText(ticket.description || ticket.desc || ticket.title || 'Emergency report received.')}</p></div>
-        </div>
-        <div class="flex justify-end border-t border-[#ded9d1] px-5 py-3"><button type="button" data-close-emergency-alert class="rounded-lg bg-[#311419] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#4a282d]">Acknowledge Alert</button></div>
-      </div>`;
-
-    const close = () => modal.remove();
-    modal.querySelectorAll('[data-close-emergency-alert]').forEach(button => button.addEventListener('click', close));
-    modal.addEventListener('click', event => { if (event.target === modal) close(); });
-    document.body.appendChild(modal);
-  };
-
-  pendingEmergencyAlerts.splice(0).forEach(window.showEmergencyAlert);
-
-  function escapeEmergencyText(value) {
-    const div = document.createElement('div');
-    div.textContent = String(value == null ? '' : value);
-    return div.innerHTML;
-  }
-
-  function formatEmergencyTime(timestamp) {
-    const date = new Date(Number(timestamp));
-    return Number.isNaN(date.getTime()) ? 'Just now' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-  }
-
-  function emergencyCoordinates(ticket) {
-    const latitude = Number(ticket.latitude ?? ticket.lat);
-    const longitude = Number(ticket.longitude ?? ticket.lng);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
-    const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}`;
-    return `<p class="mt-1 text-xs font-mono text-[#7a0e0e]">Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}</p><a class="mt-2 inline-flex rounded-md bg-[#ba1a1a] px-2.5 py-1 text-xs font-bold text-white hover:bg-[#7a0e0e]" href="${mapUrl}" target="_blank" rel="noopener noreferrer">View on Map</a>`;
-  }
 
   function getActiveRole() {
     if (typeof window !== 'undefined') {
