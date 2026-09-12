@@ -507,10 +507,11 @@ async def create_new_ticket(request: Request):
                     ticket["isEmergency"] = True
                     ticket["emergencyType"] = item.get("emergencyType") or item.get("category") or "Emergency"
                 assigned_dept = ticket.get("department")
-                channels = ["global", "role:admin"]
+                is_emergency = bool(item.get("isEmergency") or item.get("emergencyType"))
+                channels = ["role:admin"] if is_emergency else ["global", "role:admin"]
                 if assigned_dept:
                     channels.append(f"dept:{assigned_dept}")
-                event_type = "emergency_alert" if item.get("isEmergency") or item.get("emergencyType") else "ticket_created"
+                event_type = "emergency_alert" if is_emergency else "ticket_created"
                 await ws_manager.broadcast(event_type, ticket, channels=channels)
             else:
                 # Check for status transition
@@ -547,11 +548,12 @@ async def create_new_ticket(request: Request):
     assigned_dept = ticket.get("department")
 
     # Broadcast real-time event instantly!
-    channels = ["global", "role:admin"]
+    is_emergency = bool(body.get("isEmergency") or body.get("emergencyType"))
+    channels = ["role:admin"] if is_emergency else ["global", "role:admin"]
     if assigned_dept:
         channels.append(f"dept:{assigned_dept}")
 
-    event_type = "emergency_alert" if body.get("isEmergency") or body.get("emergencyType") else "ticket_created"
+    event_type = "emergency_alert" if is_emergency else "ticket_created"
     await ws_manager.broadcast(event_type, ticket, channels=channels)
     return {"success": True, "ticket": ticket}
 
