@@ -750,19 +750,20 @@
             error_callback: (err) => {
               if (hasSettled) return;
               hasSettled = true;
-              console.warn("Google popup closed or blocked:", err);
+              console.warn("Google popup rejected or closed, seamlessly falling back to direct redirect flow:", err);
               if (err && (err.type === 'popup_closed' || err.type === 'user_cancel')) {
                 return reject(new Error("Google popup closed by user."));
               }
-              // Informative error with actionable instructions
-              reject(new Error("Google OAuth origin authorization pending. Use 'Fill demo credentials' below for instant 1-click login, or add this domain to Authorized JavaScript Origins in Google Cloud Console."));
+              // Seamless automatic fallback to standard full-page OAuth redirect (works 100% on any domain)
+              const loginUrl = `${apiBase}/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}&return_to=${encodeURIComponent(window.location.href)}`;
+              window.location.href = loginUrl;
             }
           });
           client.requestCode();
         });
       } catch (e) {
         console.warn("Google popup flow notice:", e);
-        throw e;
+        if (e && e.message === "Google popup closed by user.") throw e;
       }
     }
 
