@@ -1048,16 +1048,22 @@
 
               let resolvedName = `Campus Zone (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
               let resolvedBldg = 'Main Academic & Computing Wing';
+              let primaryTitle = 'Campus Zone';
 
-              // If active campus map instance exists, use its building resolver
-              const mapContainer = document.getElementById('student-campus-map-container');
-              if (window.activeCampusMap && typeof window.activeCampusMap.resolveReadableLocation === 'function') {
-                const res = await window.activeCampusMap.resolveReadableLocation(lat, lng);
+              try {
+                const buildingsList = window.activeCampusMap ? window.activeCampusMap.buildings : [];
+                const res = window.resolveDetailedLocation
+                  ? await window.resolveDetailedLocation(lat, lng, buildingsList)
+                  : (window.activeCampusMap && typeof window.activeCampusMap.resolveReadableLocation === 'function'
+                    ? await window.activeCampusMap.resolveReadableLocation(lat, lng)
+                    : null);
+
                 if (res) {
-                  resolvedName = res.locationName;
-                  resolvedBldg = res.buildingName;
+                  resolvedName = res.fullAddress || res.locationName || resolvedName;
+                  resolvedBldg = res.buildingName || resolvedBldg;
+                  primaryTitle = res.primaryTitle || resolvedBldg || resolvedName;
                 }
-              }
+              } catch (_) {}
 
               // Update building select
               const buildingSelect = document.getElementById('input-building-wing');
@@ -1093,7 +1099,10 @@
                 intakeModal._pendingLocationName = resolvedName;
               }
 
-              if (modalGpsLabel) modalGpsLabel.textContent = `📍 ${resolvedName.length > 20 ? resolvedName.slice(0, 18) + '…' : resolvedName}`;
+              if (modalGpsLabel) {
+                const shortLabel = primaryTitle.length > 22 ? primaryTitle.slice(0, 20) + '…' : primaryTitle;
+                modalGpsLabel.textContent = `📍 ${shortLabel}`;
+              }
               btnModalGps.disabled = false;
               showStudentToast(`Location detected: ${resolvedName} (±${accuracy}m)`, "success");
             },

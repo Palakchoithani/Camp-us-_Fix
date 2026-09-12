@@ -188,6 +188,191 @@
     });
   }
 
+  // Detailed Address Formatter - Parses geocoding responses and builds readable hierarchical address
+  function formatDetailedAddress(geoData, nearestCampusBldg) {
+    if (!geoData || typeof geoData !== 'object') {
+      if (nearestCampusBldg) {
+        return {
+          primaryTitle: nearestCampusBldg.name,
+          secondaryLine: nearestCampusBldg.zone || 'Campus Zone',
+          fullAddress: `${nearestCampusBldg.name}, ${nearestCampusBldg.zone || 'Campus Zone'}`,
+          buildingName: nearestCampusBldg.name,
+          city: 'Bhopal',
+          state: 'Madhya Pradesh',
+          pin: ''
+        };
+      }
+      return {
+        primaryTitle: 'Campus Location',
+        secondaryLine: '',
+        fullAddress: 'Campus Location',
+        buildingName: 'Campus Location',
+        city: '',
+        state: '',
+        pin: ''
+      };
+    }
+
+    const addr = geoData.address || {};
+
+    // 1. Primary building / POI / Campus facility / Landmark
+    const poi = addr.university || addr.college || addr.school ||
+                addr.hospital || addr.amenity || addr.building ||
+                addr.office || addr.place || addr.leisure ||
+                addr.tourism || addr.historic || addr.shop ||
+                addr.commercial || geoData.name;
+
+    // 2. Suburb / Area / Locality / Sector / Village
+    const area = addr.suburb || addr.neighbourhood || addr.quarter ||
+                 addr.residential || addr.village || addr.hamlet ||
+                 addr.city_district || addr.subdistrict;
+
+    // 3. Road / Street / Highway
+    const road = addr.road || addr.street || addr.footway || addr.path || addr.highway;
+
+    // 4. City / Town
+    const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || '';
+
+    // 5. State
+    const state = addr.state || addr.province || addr.state_district || '';
+
+    // 6. Postcode / PIN
+    const pin = addr.postcode || '';
+
+    // Determine Primary Title: POI > Area > Road
+    let primaryTitle = poi || area || road;
+
+    // If primary title is empty or is literally just the city name (e.g. "Bhopal")
+    if (!primaryTitle || (city && primaryTitle.trim().toLowerCase() === city.trim().toLowerCase())) {
+      if (nearestCampusBldg && nearestCampusBldg.name) {
+        primaryTitle = nearestCampusBldg.name;
+      } else if (area && (!city || area.trim().toLowerCase() !== city.trim().toLowerCase())) {
+        primaryTitle = area;
+      } else if (road) {
+        primaryTitle = road;
+      } else if (city) {
+        primaryTitle = `${city} Campus Hub`;
+      } else {
+        primaryTitle = 'Campus Zone';
+      }
+    }
+
+    // Determine Building Name for dropdown and form preselection
+    const matchedBuildingName = poi || (nearestCampusBldg ? nearestCampusBldg.name : primaryTitle);
+
+    // Construct Secondary Line: [Road/Street], [City], [State] [PIN]
+    const line2Parts = [];
+    if (road && road.trim().toLowerCase() !== primaryTitle.trim().toLowerCase()) {
+      line2Parts.push(road.trim());
+    }
+    if (area && area.trim().toLowerCase() !== primaryTitle.trim().toLowerCase() && !line2Parts.some(p => p.toLowerCase() === area.trim().toLowerCase())) {
+      line2Parts.push(area.trim());
+    }
+    if (city && city.trim().toLowerCase() !== primaryTitle.trim().toLowerCase() && !line2Parts.some(p => p.toLowerCase() === city.trim().toLowerCase())) {
+      line2Parts.push(city.trim());
+    }
+
+    const statePin = (state && pin) ? `${state} ${pin}` : (state || pin || '');
+    if (statePin && statePin.trim().toLowerCase() !== primaryTitle.trim().toLowerCase()) {
+      line2Parts.push(statePin.trim());
+    }
+
+    const secondaryLine = line2Parts.join(', ');
+    const fullAddress = secondaryLine ? `${primaryTitle}, ${secondaryLine}` : primaryTitle;
+
+    return {
+      primaryTitle,
+      secondaryLine,
+      fullAddress,
+      buildingName: matchedBuildingName,
+      city,
+      state,
+      pin
+    };
+  }
+
+  // Reverse Geocoding Engine with OSM Nominatim & BigDataCloud fallbacks
+  async function resolveDetailedLocation(lat, lng, buildingsList = []) {
+    let nearest = null;
+    let minDist = Infinity;
+    if (Array.isArray(buildingsList) && buildingsList.length > 0) {
+      buildingsList.forEach(b => {
+        if (typeof b.lat === 'number' && typeof b.lng === 'number') {
+          const d = calcDistanceMeters(lat, lng, b.lat, b.lng);
+          if (d < minDist) {
+            minDist = d;
+            nearest = b;
+          }
+        }
+      });
+    }
+
+    let rawGeo = null;
+
+    // 1. Primary reverse geocoding via OpenStreetMap Nominatim with strict timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.address || data.display_name)) {
+          rawGeo = data;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Secondary fallback via BigDataCloud client API if Nominatim is rate-limited or fails
+    if (!rawGeo) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            rawGeo = {
+              name: data.locality || data.city,
+              address: {
+                city: data.city || data.locality,
+                state: data.principalSubdivision,
+                postcode: data.postcode,
+                country: data.countryName
+              },
+              display_name: [data.locality, data.city, data.principalSubdivision, data.countryName].filter(Boolean).join(', ')
+            };
+          }
+        }
+      } catch (_) {}
+    }
+
+    const formatted = formatDetailedAddress(rawGeo, nearest);
+
+    return {
+      ...formatted,
+      locationName: formatted.fullAddress,
+      zone: nearest ? nearest.zone : 'Campus Zone',
+      distance: nearest ? minDist : null,
+      isCampusZone: minDist <= 1500,
+      lat,
+      lng
+    };
+  }
+
+  // Export helper functions to global window scope
+  window.formatDetailedAddress = formatDetailedAddress;
+  window.resolveDetailedLocation = resolveDetailedLocation;
+
   /**
    * CampusMapController Class
    */
@@ -217,6 +402,10 @@
       this.recenterPending = false;
       this.hasAcquiredFirstFix = false;
       this.userLocationPlaceName = '';
+      this.userLocationSecondaryLine = '';
+      this.userLocationFullAddress = '';
+      this.userLocationCity = '';
+      this.detectedBuildingName = '';
 
       this.init();
     }
@@ -814,71 +1003,7 @@
     }
 
     async resolveReadableLocation(lat, lng) {
-      // 1. Check nearest campus building
-      const nearest = this.getNearestBuilding(lat, lng);
-      const dist = nearest ? calcDistanceMeters(lat, lng, nearest.lat, nearest.lng) : Infinity;
-
-      // If within campus grounds / immediate facility proximity (<= 650m)
-      if (nearest && dist <= 650) {
-        return {
-          locationName: nearest.name,
-          buildingName: nearest.name,
-          zone: nearest.zone,
-          distance: dist,
-          isCampusZone: true
-        };
-      }
-
-      // 2. Beyond immediate campus hub: Attempt reverse geocoding via OpenStreetMap Nominatim with strict 2.5s abort timeout
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: { 'Accept': 'application/json' }
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          const addr = data.address || {};
-          const primaryName = addr.amenity || addr.building || addr.office || addr.university || addr.road || addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.city || data.name;
-          const locality = addr.suburb || addr.neighbourhood || addr.city || addr.town || '';
-          if (primaryName) {
-            const readable = locality && !primaryName.toLowerCase().includes(locality.toLowerCase())
-              ? `${primaryName}, ${locality}`
-              : primaryName;
-            return {
-              locationName: readable,
-              buildingName: nearest ? nearest.name : readable,
-              zone: nearest ? nearest.zone : 'Campus Perimeter',
-              distance: dist,
-              isCampusZone: dist <= 1500
-            };
-          }
-        }
-      } catch (_) {
-        // Network timeout / offline fallback
-      }
-
-      // 3. Fallback to nearest campus location
-      if (nearest) {
-        return {
-          locationName: dist > 1200 ? `${nearest.name} (Perimeter)` : nearest.name,
-          buildingName: nearest.name,
-          zone: nearest.zone,
-          distance: dist,
-          isCampusZone: dist <= 1500
-        };
-      }
-
-      return {
-        locationName: `Campus Zone (${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E)`,
-        buildingName: 'Campus Grounds',
-        zone: 'Zone A • Campus Hub',
-        distance: null,
-        isCampusZone: false
-      };
+      return await resolveDetailedLocation(lat, lng, this.buildings);
     }
 
     highlightBuildingCard(bldgId) {
@@ -996,18 +1121,25 @@
       }
     }
 
-    updateLocationTelemetryDisplay(lat, lng, accuracy, readableName, nearest) {
+    updateLocationTelemetryDisplay(lat, lng, accuracy, readableName, nearest, secondaryLine, city) {
       const issuesCount = (nearest && nearest.issues) ? nearest.issues.length : 0;
       const bldgInfo = nearest
         ? ` · 🏢 <strong class="text-[#5D3136]">${nearest.name}</strong> <span class="font-mono text-[10px] px-1.5 py-0.5 rounded ${issuesCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'} font-bold">(${issuesCount} Problem${issuesCount === 1 ? '' : 's'} Here)</span> <button onclick="window.focusCurrentLocationProblems('${this.containerId}')" class="ml-1 text-[#0284c7] hover:underline font-bold text-[11px] cursor-pointer inline-flex items-center gap-0.5"><span>View Details</span> <span>↗</span></button>`
         : '';
 
-      const statusHtml = `📍 <strong class="text-[#311419] font-bold text-xs">${readableName}</strong> · <span class="text-[#594043] font-mono">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</span> (±${accuracy}m)${bldgInfo}`;
+      const subLine = secondaryLine || this.userLocationSecondaryLine;
+      const secondaryHtml = subLine
+        ? ` <span class="text-[#594043] text-xs font-normal">(${subLine})</span>`
+        : '';
+
+      const statusHtml = `📍 <strong class="text-[#311419] font-bold text-xs">${readableName}</strong>${secondaryHtml} · <span class="text-[#594043] font-mono">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</span> (±${accuracy}m)${bldgInfo}`;
       this.updateLocationStatus("active", statusHtml);
 
       const badgeEl = document.getElementById(`${this.containerId}-gps-badge`);
       if (badgeEl) {
-        badgeEl.textContent = `📍 ${readableName.toUpperCase()}`;
+        const cityName = city || this.userLocationCity || '';
+        const cityPart = (cityName && cityName.toLowerCase() !== readableName.toLowerCase()) ? ` · ${cityName.toUpperCase()}` : '';
+        badgeEl.textContent = `📍 ${readableName.toUpperCase()}${cityPart}`;
       }
 
       const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
@@ -1050,9 +1182,11 @@
         const nearest = this.getNearestBuilding(lat, lng);
         const initialLocName = nearest ? nearest.name : `Campus Area (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
         this.userLocationPlaceName = initialLocName;
+        this.userLocationSecondaryLine = nearest ? (nearest.zone || 'Campus Zone') : '';
+        this.userLocationFullAddress = nearest ? `${nearest.name}, ${nearest.zone || 'Campus Zone'}` : initialLocName;
         this.detectedBuildingName = nearest ? nearest.name : 'Campus Grounds';
 
-        this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest);
+        this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest, this.userLocationSecondaryLine);
         this.updateUserBeacon();
 
         if (this.recenterPending) {
@@ -1060,13 +1194,16 @@
           this.recenterToUserLocation();
         }
 
-        // Asynchronous reverse-geocoding refinement if testing beyond immediate campus facility
+        // Asynchronous reverse-geocoding refinement for exact real-world address
         try {
           const resolved = await this.resolveReadableLocation(lat, lng);
-          if (resolved && resolved.locationName && resolved.locationName !== this.userLocationPlaceName) {
-            this.userLocationPlaceName = resolved.locationName;
-            this.detectedBuildingName = resolved.buildingName;
-            this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest);
+          if (resolved && (resolved.primaryTitle || resolved.fullAddress || resolved.locationName)) {
+            this.userLocationPlaceName = resolved.primaryTitle || resolved.locationName;
+            this.userLocationSecondaryLine = resolved.secondaryLine || '';
+            this.userLocationFullAddress = resolved.fullAddress || resolved.locationName;
+            this.userLocationCity = resolved.city || '';
+            this.detectedBuildingName = resolved.buildingName || (nearest ? nearest.name : this.userLocationPlaceName);
+            this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest, this.userLocationSecondaryLine, this.userLocationCity);
             this.updateUserBeacon();
           }
         } catch (_) {}
@@ -1184,8 +1321,6 @@
       let nearestBldg = this.getNearestBuilding(lat, lng);
       let minDistance = nearestBldg ? (nearestBldg.distance || calcDistanceMeters(lat, lng, nearestBldg.lat, nearestBldg.lng)) : null;
       const issuesAtLocation = nearestBldg ? (nearestBldg.issues || []) : [];
-      const resolvedName = this.userLocationPlaceName || (nearestBldg ? nearestBldg.name : `Campus Area (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-      const resolvedBldgName = (nearestBldg ? nearestBldg.name : resolvedName);
 
       // Update Filter Button badge and visibility
       const myLocFilterBtn = document.getElementById(`${this.containerId}-filter-my-location`);
@@ -1274,7 +1409,12 @@
         `;
       }
 
-      const safeLocName = (resolvedName || '').replace(/'/g, "\\'");
+      const resolvedPrimary = this.userLocationPlaceName || (nearestBldg ? nearestBldg.name : `Campus Area (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      const resolvedSubLine = this.userLocationSecondaryLine || (nearestBldg ? (nearestBldg.zone || 'Campus Zone') : '');
+      const resolvedFull = this.userLocationFullAddress || (resolvedSubLine ? `${resolvedPrimary}, ${resolvedSubLine}` : resolvedPrimary);
+      const resolvedBldgName = this.detectedBuildingName || (nearestBldg ? nearestBldg.name : resolvedPrimary);
+
+      const safeLocName = (resolvedFull || resolvedPrimary || '').replace(/'/g, "\\'");
       const safeBldgName = (resolvedBldgName || '').replace(/'/g, "\\'");
 
       const popupContent = `
@@ -1288,10 +1428,13 @@
             </span>
           </div>
 
-          <h4 class="font-bold text-sm text-[#311419] flex items-center gap-1.5 mb-1 leading-snug">
-            <span class="text-base text-[#0284c7]">📍</span>
-            <span>${resolvedName}</span>
-          </h4>
+          <div class="mb-2 pb-2 border-b border-[#E2DBD0]/60">
+            <h4 class="font-bold text-sm text-[#311419] flex items-start gap-1.5 leading-snug">
+              <span class="text-base text-[#0284c7] shrink-0 mt-0.5">📍</span>
+              <span>${resolvedPrimary}</span>
+            </h4>
+            ${resolvedSubLine ? `<div class="text-[11px] text-[#594043] font-medium pl-5 mt-0.5 leading-relaxed">${resolvedSubLine}</div>` : ''}
+          </div>
           <div class="font-mono text-[11px] text-[#594043] my-1.5 bg-[#f9f5ed] p-2 rounded-xl border border-[#e2dbd0] flex items-center justify-between">
             <div>
               <div class="font-bold text-[#311419]">${lat.toFixed(6)}°N, ${lng.toFixed(6)}°E</div>
@@ -1328,9 +1471,10 @@
         </div>
       `;
 
+      const secondaryTooltip = resolvedSubLine ? `<br><span style="color: #cbd5e1; font-size: 10px;">${resolvedSubLine}</span>` : '';
       const tooltipContent = issuesAtLocation.length > 0
-        ? `📍 <strong>${resolvedName}</strong> · <span style="color: #fef08a; font-weight: bold;">⚠️ ${issuesAtLocation.length} Problem${issuesAtLocation.length === 1 ? '' : 's'}</span>`
-        : `📍 <strong>${resolvedName}</strong> · <span style="color: #bbf7d0; font-weight: bold;">✓ Live Location (±${accuracy}m)</span>`;
+        ? `📍 <strong>${resolvedPrimary}</strong>${secondaryTooltip} · <span style="color: #fef08a; font-weight: bold;">⚠️ ${issuesAtLocation.length} Problem${issuesAtLocation.length === 1 ? '' : 's'}</span>`
+        : `📍 <strong>${resolvedPrimary}</strong>${secondaryTooltip} · <span style="color: #bbf7d0; font-weight: bold;">✓ Live Location (±${accuracy}m)</span>`;
 
       if (!this.userMarker) {
         this.userMarker = L.marker([lat, lng], { icon: userPinIcon, zIndexOffset: 1000 }).addTo(this.map);
