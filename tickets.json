@@ -320,7 +320,10 @@
     "location": "Hostel B / Academic E",
     "status": "escalated",
     "anonymous": false,
+    "isAnonymous": false,
     "preference": "protected",
+    "studentName": "Confidential Reporter",
+    "studentId": "PROTECTED",
     "createdAt": 1789066044290
   },
   {
@@ -372,6 +375,9 @@
     "location": "Main Library Corridor",
     "status": "escalated",
     "anonymous": true,
+    "isAnonymous": true,
+    "studentName": "Anonymous Student",
+    "studentId": "ANON",
     "createdAt": 1789065645604
   },
   {

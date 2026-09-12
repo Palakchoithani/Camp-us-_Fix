@@ -383,8 +383,8 @@ def seed_initial_data(conn: sqlite3.Connection):
                         status,
                         t.get("progress", 10),
                         t.get("currentStep", "Assigned for review"),
-                        t.get("studentId", "2024CS0123"),
-                        t.get("studentName", "Aarav K. Senapati"),
+                        "ANON" if (t.get("isAnonymous") or t.get("anonymous")) else t.get("studentId", "2024CS0123"),
+                        "Anonymous Student" if (t.get("isAnonymous") or t.get("anonymous")) else t.get("studentName", "Student"),
                         1 if t.get("isAnonymous") or t.get("anonymous") else 0,
                         1 if t.get("isRecurring") else 0,
                         t.get("duplicateOf"),
@@ -428,9 +428,10 @@ def row_to_ticket(row: sqlite3.Row, conn: Optional[sqlite3.Connection] = None) -
     t = dict(row)
     # Re-map DB snake_case columns to camelCase expected by existing frontend code
     tid = t["id"]
-    t["studentId"] = t.pop("student_id", "")
-    t["studentName"] = t.pop("student_name", "")
-    t["isAnonymous"] = bool(t.pop("is_anonymous", 0))
+    is_anon = bool(t.pop("is_anonymous", 0))
+    t["isAnonymous"] = is_anon
+    t["studentId"] = "ANON" if is_anon else t.pop("student_id", "")
+    t["studentName"] = "Anonymous Student" if is_anon else t.pop("student_name", "")
     t["isRecurring"] = bool(t.pop("is_recurring", 0))
     t["duplicateOf"] = t.pop("duplicate_of", None)
     t["photoUrl"] = t.pop("photo_url", None)
@@ -544,8 +545,14 @@ def create_ticket(data: Dict[str, Any], actor: Optional[Dict[str, Any]] = None) 
             dept = classify_ticket_department(data.get("category", ""), f"{data.get('title', '')} {data.get('description', '')}")
         if not dept:
             dept = "Facility Maintenance & Plumbing"
-        student_id = data.get("studentId") or (actor.get("id") if actor else "2024CS0123")
-        student_name = data.get("studentName") or (actor.get("name") if actor else "Student")
+        
+        is_anon = 1 if (data.get("isAnonymous") or data.get("anonymous")) else 0
+        if is_anon:
+            student_id = "ANON"
+            student_name = "Anonymous Student"
+        else:
+            student_id = data.get("studentId") or (actor.get("id") if actor else "2024CS0123")
+            student_name = data.get("studentName") or (actor.get("name") if actor else "Student")
 
         with conn:
             conn.execute("""

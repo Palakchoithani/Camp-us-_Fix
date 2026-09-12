@@ -703,7 +703,7 @@
                       ${(t.latitude && t.longitude) ? `<span class="inline-flex items-center gap-0.5 text-[10px] font-mono text-[#0284c7] font-semibold bg-[#f0f9ff] px-1.5 py-0.5 rounded border border-[#bae6fd]" title="Coordinates: ${Number(t.latitude).toFixed(5)}, ${Number(t.longitude).toFixed(5)}">📍 ${Number(t.latitude).toFixed(4)}, ${Number(t.longitude).toFixed(4)}</span>` : ''}
                     </span>
                     <span>•</span>
-                    <span>Reported by: <strong class="text-primary">${t.studentName || 'Student'}</strong></span>
+                    <span>Reported by: <strong class="text-primary">${(t.isAnonymous || t.anonymous || t.studentName === 'Anonymous Student' || t.studentName === 'Confidential Student') ? 'Zero-Trace Shield (Anonymous)' : (t.studentName || 'Student')}</strong></span>
                     <span>•</span>
                     <span class="font-mono text-[11px] text-secondary">${formatTimeAgo(t.createdAt)}</span>
                   </div>

@@ -1167,6 +1167,11 @@
           const loc = document.getElementById('sheLocation').value.trim();
           const desc = document.getElementById('sheDesc').value.trim();
           const isAnon = (sheReportingPref === 'anonymous');
+          let authSession = null;
+          try {
+            authSession = JSON.parse(sessionStorage.getItem('campus_auth_session') || localStorage.getItem('campus_auth_session') || 'null');
+          } catch (_) {}
+          const authUser = authSession && authSession.user ? authSession.user : null;
 
           const newId = "SHE-" + Math.floor(1000 + Math.random() * 9000);
           threads.unshift({
@@ -1180,7 +1185,10 @@
             location: loc,
             status: "escalated",
             anonymous: isAnon,
+            isAnonymous: isAnon,
             preference: sheReportingPref,
+            studentName: isAnon ? "Anonymous Student" : (authUser && authUser.name ? authUser.name : "Confidential Reporter"),
+            studentId: isAnon ? "ANON" : (authUser && authUser.id ? authUser.id : "PROTECTED"),
             createdAt: Date.now()
           });
           syncWithServer();
@@ -1206,6 +1214,12 @@
           const loc = document.getElementById('raggingLocation').value.trim();
           const desc = document.getElementById('raggingDesc').value.trim();
 
+          let authSession = null;
+          try {
+            authSession = JSON.parse(sessionStorage.getItem('campus_auth_session') || localStorage.getItem('campus_auth_session') || 'null');
+          } catch (_) {}
+          const authUser = authSession && authSession.user ? authSession.user : null;
+
           const newId = "RAG-" + Math.floor(1000 + Math.random() * 9000);
           threads.unshift({
             id: newId,
@@ -1218,10 +1232,13 @@
             location: loc,
             status: "escalated",
             anonymous: false,
+            isAnonymous: false,
             protectedIdentity: true,
             preference: "Protected",
             urgency: "CRITICAL",
             safetyRisk: true,
+            studentName: authUser && authUser.name ? authUser.name : "Confidential Reporter",
+            studentId: authUser && authUser.id ? authUser.id : "PROTECTED",
             createdAt: Date.now()
           });
           syncWithServer();

@@ -851,7 +851,9 @@
                   <div class="p-3 rounded-lg bg-surface-container-low border border-outline">
                     <div class="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
                       <span class="font-bold text-primary">Student Description</span>
-                      <span class="text-secondary">Reported by: <strong class="text-primary">${escapeHtml(t.studentName || 'Student')}</strong> (${escapeHtml(t.studentId || 'Verified')})</span>
+                      <span class="text-secondary">Reported by: ${(t.isAnonymous || t.anonymous || t.studentName === 'Anonymous Student' || t.studentName === 'Confidential Student')
+                        ? `<strong class="text-primary">Zero-Trace Shield (Masked)</strong>`
+                        : `<strong class="text-primary">${escapeHtml(t.studentName || 'Student')}</strong> (${escapeHtml(t.studentId || 'Verified')})`}</span>
                     </div>
                     <p class="text-on-surface-variant leading-relaxed text-xs">${escapeHtml(t.notes || t.description || 'Student complaint submitted via campus intake.')}</p>
                     ${t.photoUrl ? `
