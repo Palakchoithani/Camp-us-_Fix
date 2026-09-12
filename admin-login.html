@@ -85,8 +85,8 @@
 
     <!-- Error Alert -->
     <div id="auth-modal-error"
-      class="hidden text-xs text-[#f87171] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-md p-2.5 font-mono">
-      <span id="auth-error-text">Authentication failed.</span>
+      class="hidden text-xs text-[#f87171] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-md p-3 font-mono leading-relaxed space-y-2">
+      <div id="auth-error-text">Authentication failed.</div>
     </div>
 
     <!-- Clean Login Form -->
@@ -452,7 +452,17 @@
           } catch (err) {
             if (text) text.textContent = originalText;
             if (errBox && errText) {
-              errText.textContent = err.message || "Google authentication failed.";
+              const msg = err.message || "Google authentication failed.";
+              errText.innerHTML = `
+                <div class="font-semibold text-rose-300">Google Authentication Note</div>
+                <div class="text-[11px] text-white/80 mt-1">${msg}</div>
+                <div class="pt-2">
+                  <button type="button" onclick="window.autofillDemoCredentials(); document.getElementById('btn-submit-auth').click();"
+                    class="px-2.5 py-1 text-[11px] bg-rose-600/30 hover:bg-rose-600/50 text-white rounded border border-rose-500/40 transition">
+                    👉 Click here to Login instantly with Demo Credentials
+                  </button>
+                </div>
+              `;
               errBox.classList.remove('hidden');
             }
           }
