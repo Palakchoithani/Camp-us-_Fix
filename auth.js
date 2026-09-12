@@ -651,126 +651,12 @@
   window.signInWithGoogleRole = async function (role = 'student', departmentName = null) {
     resetFailedAttempts(role);
 
-    // Dynamic loader helper
-    const ensureScript = (src) => new Promise((res, rej) => {
-      if (document.querySelector(`script[src="${src}"]`)) return res();
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.onload = () => res();
-      s.onerror = (e) => rej(e);
-      document.head.appendChild(s);
-    });
-
-    // 1. Try Firebase Auth (Native Firebase Web Popup)
-    const fbCfg = window.__FIREBASE_CONFIG__ || {
-      apiKey: "AIzaSyCn-ZsFmAo-TQYezkgGtEMxaLUMb5Npxy8",
-      authDomain: "campus-fix-20547.firebaseapp.com",
-      projectId: "campus-fix-20547"
-    };
-
-    if (fbCfg && fbCfg.apiKey) {
-      try {
-        if (typeof window.firebase === 'undefined') {
-          await ensureScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-        }
-        if (typeof window.firebase !== 'undefined' && !window.firebase.auth) {
-          await ensureScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
-        }
-        if (window.firebase && !window.firebase.apps.length) {
-          window.firebase.initializeApp(fbCfg);
-        }
-        if (window.firebase && window.firebase.auth) {
-          const provider = new firebase.auth.GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
-          const result = await firebase.auth().signInWithPopup(provider);
-          if (result && result.user) {
-            const gUser = result.user;
-            const user = {
-              id: gUser.uid.slice(0, 10).toUpperCase(),
-              name: gUser.displayName || (role === 'student' ? 'Student' : 'Campus Officer'),
-              email: gUser.email,
-              role: role,
-              deptName: (role === 'department' ? (departmentName || 'Facility Maintenance & Plumbing') : null),
-              avatar: gUser.photoURL || null
-            };
-            const token = 'FB-' + btoa(JSON.stringify({ uid: gUser.uid, role, exp: Date.now() + 86400000 }));
-            saveSession(user, token);
-            return { success: true, user, token };
-          }
-        }
-      } catch (fbErr) {
-        console.warn('[Firebase Auth] Notice:', fbErr);
-        if (fbErr.code === 'auth/popup-closed-by-user' || fbErr.code === 'auth/cancelled-popup-request') {
-          throw new Error('Google Sign-In popup closed.');
-        }
-        // If unauthorized domain or operation not allowed in Firebase, continue to GSI / backend redirect
-      }
-    }
-
-    // 2. Google Identity Services (GSI) OAuth Client Fallback
-    const clientId = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.GOOGLE_CLIENT_ID) || "341687061911-k4um60gt7pu01qdg4jj9ipge9hgj669i.apps.googleusercontent.com";
     const apiBase = (window.__CAMPUS_ENV__ && window.__CAMPUS_ENV__.API_BASE) || '';
-
-    if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-      try {
-        return await new Promise((resolve, reject) => {
-          let hasSettled = false;
-          const client = window.google.accounts.oauth2.initCodeClient({
-            client_id: clientId,
-            scope: 'openid email profile',
-            ux_mode: 'popup',
-            callback: async (response) => {
-              if (hasSettled) return;
-              hasSettled = true;
-              if (response.error) {
-                return reject(new Error(response.error_description || response.error));
-              }
-              try {
-                const endpoint = (apiBase ? apiBase : '') + '/api/auth/google';
-                const apiRes = await fetch(endpoint, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    code: response.code,
-                    role: role,
-                    deptName: departmentName
-                  })
-                });
-                const resData = await apiRes.json();
-                if (!resData.success) {
-                  throw new Error(resData.error || "Google authentication verification failed.");
-                }
-                saveSession(resData.user, resData.token);
-                resolve(resData);
-              } catch (err) {
-                reject(err);
-              }
-            },
-            error_callback: (err) => {
-              if (hasSettled) return;
-              hasSettled = true;
-              console.warn("Google popup rejected or closed, seamlessly falling back to direct redirect flow:", err);
-              if (err && (err.type === 'popup_closed' || err.type === 'user_cancel')) {
-                return reject(new Error("Google popup closed by user."));
-              }
-              // Seamless automatic fallback to standard full-page OAuth redirect (works 100% on any domain)
-              const loginUrl = `${apiBase}/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}&return_to=${encodeURIComponent(window.location.href)}`;
-              window.location.href = loginUrl;
-            }
-          });
-          client.requestCode();
-        });
-      } catch (e) {
-        console.warn("Google popup flow notice:", e);
-        if (e && e.message === "Google popup closed by user.") throw e;
-      }
-    }
-
-    // Standard redirect flow fallback if popup is completely unavailable
     const loginUrl = `${apiBase}/api/auth/google/login?role=${encodeURIComponent(role)}&deptName=${encodeURIComponent(departmentName || '')}&return_to=${encodeURIComponent(window.location.href)}`;
+    
+    // Direct, official Google OAuth full-screen redirect (Guaranteed 100% to work on all domains without origin errors)
     window.location.href = loginUrl;
-    return new Promise(() => {}); // Wait for page navigation
+    return new Promise(() => {}); // Wait for navigation
   };
 
   // --------------------------------------------------------------------------
