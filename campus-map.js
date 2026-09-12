@@ -401,6 +401,8 @@
       this.watchPositionId = null;
       this.recenterPending = false;
       this.hasAcquiredFirstFix = false;
+      this.isLocating = false;
+      this.locationRequestSeq = 0;
       this.userLocationPlaceName = '';
       this.userLocationSecondaryLine = '';
       this.userLocationFullAddress = '';
@@ -1073,8 +1075,9 @@
       const locateBtn = document.getElementById(`${this.containerId}-btn-locate`);
       const mapLocateBtn = document.getElementById(`${this.containerId}-map-locate`);
 
-      const triggerRecenter = () => {
-        this.recenterToUserLocation();
+      const triggerRecenter = (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        this.requestFreshLocation(true);
       };
 
       if (locateBtn) locateBtn.addEventListener("click", triggerRecenter);
@@ -1146,106 +1149,233 @@
       if (locateLabel) locateLabel.textContent = "My Location";
     }
 
-    startWatchingPosition(recenterImmediate = false) {
-      if (recenterImmediate) {
-        this.recenterPending = true;
-      }
+    async requestFreshLocation(forceRecenter = true) {
+      if (this.isLocating) return; // Prevent duplicate / conflicting requests on rapid clicks
 
       if (!navigator.geolocation) {
         this.updateLocationStatus("error", `<span class="text-[#b91c1c] font-medium">⚠️ Geolocation is not supported by your browser.</span>`);
-        if (recenterImmediate) {
-          alert("Geolocation is not supported by your browser.");
-        }
+        return;
+      }
+
+      this.isLocating = true;
+      const requestId = ++this.locationRequestSeq;
+
+      // Update UI to non-blocking "Detecting your location..." state immediately
+      const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
+      if (locateLabel) {
+        locateLabel.innerHTML = `<span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span><span>Detecting…</span></span>`;
+      }
+      this.updateLocationStatus("searching", "Detecting your live location…");
+
+      const badgeEl = document.getElementById(`${this.containerId}-gps-badge`);
+      if (badgeEl) {
+        badgeEl.textContent = "🛰️ DETECTING GPS...";
+      }
+
+      const locateBtn = document.getElementById(`${this.containerId}-btn-locate`);
+      if (locateBtn) locateBtn.classList.add("opacity-80");
+
+      return new Promise((resolve) => {
+        const doPositionRequest = (maxAge = 15000, isRetry = false) => {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              if (this.locationRequestSeq !== requestId) {
+                resolve(null);
+                return; // Superseded by a newer click
+              }
+
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const accuracy = Math.round(pos.coords.accuracy || 10);
+
+              // Store fresh coordinates immediately
+              this.hasAcquiredFirstFix = true;
+              this.userCoordinates = { lat, lng, accuracy };
+              this.updateBuildingDistances(lat, lng);
+
+              const nearest = this.getNearestBuilding(lat, lng);
+              const initialLocName = nearest ? nearest.name : `Campus Area (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
+              this.userLocationPlaceName = initialLocName;
+              this.userLocationSecondaryLine = nearest ? (nearest.zone || 'Campus Zone') : '';
+              this.userLocationFullAddress = nearest ? `${nearest.name}, ${nearest.zone || 'Campus Zone'}` : initialLocName;
+              this.detectedBuildingName = nearest ? nearest.name : 'Campus Grounds';
+
+              // Atomically update UI, beacon, and fly map immediately to fresh coordinates
+              this.updateLocationTelemetryDisplay(
+                lat,
+                lng,
+                accuracy,
+                this.userLocationPlaceName,
+                nearest,
+                this.userLocationSecondaryLine,
+                this.userLocationCity
+              );
+              this.updateUserBeacon();
+
+              if (forceRecenter && this.map) {
+                this.map.flyTo([lat, lng], 17, {
+                  duration: 0.8,
+                  easeLinearity: 0.25
+                });
+                setTimeout(() => {
+                  if (this.userMarker && this.locationRequestSeq === requestId) {
+                    this.userMarker.openPopup();
+                  }
+                }, 850);
+              }
+
+              this.isLocating = false;
+              if (locateBtn) locateBtn.classList.remove("opacity-80");
+              if (locateLabel) locateLabel.textContent = "My Location";
+              resolve(this.userCoordinates);
+
+              // Dynamically refine address via reverse geocoding asynchronously
+              (async () => {
+                try {
+                  const resolved = await resolveDetailedLocation(lat, lng, this.buildings);
+                  if (this.locationRequestSeq !== requestId) return; // Superseded by newer click
+
+                  if (resolved && (resolved.primaryTitle || resolved.fullAddress)) {
+                    this.userLocationPlaceName = resolved.primaryTitle || resolved.locationName;
+                    this.userLocationSecondaryLine = resolved.secondaryLine || '';
+                    this.userLocationFullAddress = resolved.fullAddress || resolved.locationName;
+                    this.userLocationCity = resolved.city || '';
+                    this.detectedBuildingName = resolved.buildingName || (nearest ? nearest.name : this.userLocationPlaceName);
+
+                    this.updateLocationTelemetryDisplay(
+                      lat,
+                      lng,
+                      accuracy,
+                      this.userLocationPlaceName,
+                      nearest,
+                      this.userLocationSecondaryLine,
+                      this.userLocationCity
+                    );
+                    this.updateUserBeacon();
+                  }
+                } catch (_) {}
+              })();
+            },
+            (err) => {
+              if (this.locationRequestSeq !== requestId) {
+                resolve(null);
+                return;
+              }
+
+              // If high-accuracy timed out on strict freshness, retry once with slightly relaxed freshness before failing
+              if (err.code === 3 && !isRetry) {
+                doPositionRequest(60000, true);
+                return;
+              }
+
+              this.isLocating = false;
+              if (locateBtn) locateBtn.classList.remove("opacity-80");
+              if (locateLabel) locateLabel.textContent = "My Location";
+
+              let msg = "";
+              switch (err.code) {
+                case 1: // PERMISSION_DENIED
+                  msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location permission denied. Please allow location access in your browser settings to view your position on the map.</span>`;
+                  break;
+                case 2: // POSITION_UNAVAILABLE
+                  msg = `<span class="text-[#b45309] font-medium">⚠️ GPS position unavailable. Ensure device location services are turned on.</span>`;
+                  break;
+                case 3: // TIMEOUT
+                  msg = `<span class="text-[#b45309] font-medium">⚠️ GPS request timed out. Retrying GPS connection...</span>`;
+                  break;
+                default:
+                  msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location error: ${err.message || "Unknown error"}</span>`;
+              }
+
+              this.updateLocationStatus("error", msg);
+              resolve(null);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 7000,
+              maximumAge: maxAge
+            }
+          );
+        };
+
+        doPositionRequest(30000, false);
+      });
+    }
+
+    startWatchingPosition(recenterImmediate = false) {
+      if (!navigator.geolocation) {
+        this.updateLocationStatus("error", `<span class="text-[#b91c1c] font-medium">⚠️ Geolocation is not supported by your browser.</span>`);
         return;
       }
 
       if (this.watchPositionId !== null) {
-        if (recenterImmediate && this.userCoordinates) {
-          this.recenterToUserLocation();
+        if (recenterImmediate) {
+          this.requestFreshLocation(true);
         }
         return;
       }
 
-      this.updateLocationStatus("searching", "Requesting device GPS location...");
-
       const success = async (pos) => {
+        // If an explicit user click location request is currently in flight, don't overwrite
+        if (this.isLocating) return;
+
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const accuracy = Math.round(pos.coords.accuracy || 10);
 
         this.hasAcquiredFirstFix = true;
         this.userCoordinates = { lat, lng, accuracy };
-
         this.updateBuildingDistances(lat, lng);
 
-        // Immediate nearest campus building match
-        const nearest = this.getNearestBuilding(lat, lng);
-        const initialLocName = nearest ? nearest.name : `Campus Area (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
-        this.userLocationPlaceName = initialLocName;
-        this.userLocationSecondaryLine = nearest ? (nearest.zone || 'Campus Zone') : '';
-        this.userLocationFullAddress = nearest ? `${nearest.name}, ${nearest.zone || 'Campus Zone'}` : initialLocName;
-        this.detectedBuildingName = nearest ? nearest.name : 'Campus Grounds';
-
-        this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest, this.userLocationSecondaryLine);
-        this.updateUserBeacon();
-
-        if (this.recenterPending) {
-          this.recenterPending = false;
-          this.recenterToUserLocation();
-        }
-
-        // Asynchronous reverse-geocoding refinement for exact real-world address
         try {
           const resolved = await this.resolveReadableLocation(lat, lng);
+          if (this.isLocating) return;
+
+          const nearest = this.getNearestBuilding(lat, lng);
           if (resolved && (resolved.primaryTitle || resolved.fullAddress || resolved.locationName)) {
             this.userLocationPlaceName = resolved.primaryTitle || resolved.locationName;
             this.userLocationSecondaryLine = resolved.secondaryLine || '';
             this.userLocationFullAddress = resolved.fullAddress || resolved.locationName;
             this.userLocationCity = resolved.city || '';
             this.detectedBuildingName = resolved.buildingName || (nearest ? nearest.name : this.userLocationPlaceName);
-            this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest, this.userLocationSecondaryLine, this.userLocationCity);
-            this.updateUserBeacon();
+          } else {
+            const initialLocName = nearest ? nearest.name : `Campus Area (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`;
+            this.userLocationPlaceName = initialLocName;
+            this.userLocationSecondaryLine = nearest ? (nearest.zone || 'Campus Zone') : '';
+            this.userLocationFullAddress = nearest ? `${nearest.name}, ${nearest.zone || 'Campus Zone'}` : initialLocName;
+            this.detectedBuildingName = nearest ? nearest.name : 'Campus Grounds';
           }
+
+          this.updateLocationTelemetryDisplay(lat, lng, accuracy, this.userLocationPlaceName, nearest, this.userLocationSecondaryLine, this.userLocationCity);
+          this.updateUserBeacon();
         } catch (_) {}
       };
 
       const error = (err) => {
-        let msg = "";
-        switch (err.code) {
-          case 1: // PERMISSION_DENIED
-            msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location permission denied. Please enable location access in browser settings to see your position on campus.</span>`;
-            if (this.watchPositionId !== null) {
-              navigator.geolocation.clearWatch(this.watchPositionId);
-              this.watchPositionId = null;
-            }
-            if (this.recenterPending) {
-              alert("Location access was denied. Please allow location access in your browser settings to view your position on the map.");
-            }
-            break;
-          case 2: // POSITION_UNAVAILABLE
-            msg = `<span class="text-[#b45309] font-medium">⚠️ GPS position unavailable. Ensure device location services are turned on.</span>`;
-            if (this.recenterPending) {
-              alert("Location position is unavailable. Please check your device location settings or network connection.");
-            }
-            break;
-          case 3: // TIMEOUT
-            msg = `<span class="text-[#b45309] font-medium">⚠️ Location request timed out. Retrying GPS connection...</span>`;
-            break;
-          default:
-            msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location error: ${err.message || "Unknown error"}</span>`;
+        if (!this.hasAcquiredFirstFix && !this.isLocating) {
+          let msg = "";
+          switch (err.code) {
+            case 1: // PERMISSION_DENIED
+              msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location permission denied. Please enable location access in browser settings to view your position.</span>`;
+              break;
+            case 2: // POSITION_UNAVAILABLE
+              msg = `<span class="text-[#b45309] font-medium">⚠️ GPS position unavailable. Ensure device location services are turned on.</span>`;
+              break;
+            case 3: // TIMEOUT
+              msg = `<span class="text-[#b45309] font-medium">⚠️ Location request timed out. Retrying GPS connection...</span>`;
+              break;
+            default:
+              msg = `<span class="text-[#b91c1c] font-medium">⚠️ Location error: ${err.message || "Unknown error"}</span>`;
+          }
+          this.updateLocationStatus("error", msg);
         }
-
-        this.recenterPending = false;
-        const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
-        if (locateLabel) locateLabel.textContent = "My Location";
-        this.updateLocationStatus("error", msg);
       };
 
       try {
         this.watchPositionId = navigator.geolocation.watchPosition(success, error, {
           enableHighAccuracy: true,
-          timeout: 12000,
-          maximumAge: 0
+          timeout: 15000,
+          maximumAge: 5000
         });
       } catch (e) {
         this.updateLocationStatus("error", `<span class="text-[#b91c1c]">Failed to initialize GPS: ${e.message}</span>`);
@@ -1260,26 +1390,7 @@
     }
 
     recenterToUserLocation() {
-      if (!this.map) return;
-
-      if (this.userCoordinates) {
-        this.map.flyTo([this.userCoordinates.lat, this.userCoordinates.lng], 17, {
-          duration: 1.0,
-          easeLinearity: 0.25
-        });
-        setTimeout(() => {
-          if (this.userMarker) this.userMarker.openPopup();
-        }, 1050);
-      } else {
-        this.recenterPending = true;
-        const statusEl = document.getElementById(`${this.containerId}-location-status`);
-        if (statusEl) {
-          statusEl.innerHTML = `<span class="text-[#0284c7] font-semibold">🛰️ Acquiring live GPS position...</span>`;
-        }
-        const locateLabel = document.getElementById(`${this.containerId}-locate-label`);
-        if (locateLabel) locateLabel.textContent = "Locating...";
-        this.startWatchingPosition(true);
-      }
+      this.requestFreshLocation(true);
     }
 
     updateBuildingDistances(userLat, userLng) {
